@@ -11,9 +11,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   Plus, Trash2, Eye, Copy, Share2, Users, Clock, Shuffle, Check,
-  BarChart3, ClipboardList, ToggleRight, ToggleLeft, Pencil, FileSpreadsheet, Loader2, Search,
+  BarChart3, ClipboardList, ToggleRight, ToggleLeft, Pencil, FileSpreadsheet, Loader2, Search, Printer, CopyPlus,
 } from "lucide-react";
-import { getQuizzes, deleteQuiz, updateQuiz, getResultsForQuiz, getActiveStudentsForQuiz, type Quiz, type StudentResult, type ActiveStudent } from "@/lib/quizStore";
+import { getQuizzes, deleteQuiz, updateQuiz, duplicateQuiz, getResultsForQuiz, getActiveStudentsForQuiz, type Quiz, type StudentResult, type ActiveStudent } from "@/lib/quizStore";
 import { toast } from "sonner";
 
 type FilterStatus = "all" | "active" | "inactive";
@@ -81,6 +81,17 @@ export default function TeacherDashboard() {
     await updateQuiz({ ...quiz, isActive: !quiz.isActive });
     loadData();
     toast.success(quiz.isActive ? "تم إيقاف الاختبار" : "تم تفعيل الاختبار");
+  };
+
+  const handleDuplicate = async (quizId: string) => {
+    try {
+      toast.info("جاري نسخ الاختبار...");
+      await duplicateQuiz(quizId);
+      loadData();
+      toast.success("تم أخذ نسخة من الاختبار بنجاح");
+    } catch (err) {
+      toast.error("حدث خطأ أثناء استنساخ الاختبار");
+    }
   };
 
   const copyCode = (code: string) => {
@@ -234,8 +245,10 @@ export default function TeacherDashboard() {
 
                       <div className="flex flex-wrap gap-2">
                         <Button variant="outline" size="sm" onClick={() => copyLink(quiz.code)} className="gap-1.5 rounded-lg"><Share2 className="h-3.5 w-3.5" /> نسخ الرابط</Button>
+                        <Button variant="outline" size="sm" onClick={() => navigate(`/teacher/print/${quiz.id}`)} className="gap-1.5 rounded-lg"><Printer className="h-3.5 w-3.5" /> طباعة</Button>
                         <Button variant="outline" size="sm" onClick={() => navigate(`/teacher/results/${quiz.id}`)} className="gap-1.5 rounded-lg"><Eye className="h-3.5 w-3.5" /> النتائج</Button>
                         <Button variant="outline" size="sm" onClick={() => navigate(`/teacher/edit/${quiz.id}`)} className="gap-1.5 rounded-lg"><Pencil className="h-3.5 w-3.5" /> تعديل</Button>
+                        <Button variant="outline" size="sm" onClick={() => handleDuplicate(quiz.id)} className="gap-1.5 rounded-lg"><CopyPlus className="h-3.5 w-3.5" /> استنساخ</Button>
                         <Button variant="ghost" size="sm" onClick={() => toggleActive(quiz)} className="gap-1.5 rounded-lg">
                           {quiz.isActive ? <ToggleRight className="h-3.5 w-3.5" /> : <ToggleLeft className="h-3.5 w-3.5" />}
                           {quiz.isActive ? "إيقاف" : "تفعيل"}

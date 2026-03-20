@@ -9,8 +9,30 @@ export interface QuizQuestion {
   id: string;
   type: "mcq" | "truefalse";
   text: string;
+  imageUrl?: string;
   options: QuizOption[];
   correctOptionId: string;
+}
+
+export async function uploadQuestionImage(file: File): Promise<string> {
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
+  const filePath = `images/${fileName}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from('quiz-images')
+    .upload(filePath, file);
+
+  if (uploadError) {
+    console.error("Upload error:", uploadError);
+    throw uploadError;
+  }
+
+  const { data } = supabase.storage
+    .from('quiz-images')
+    .getPublicUrl(filePath);
+
+  return data.publicUrl;
 }
 
 export interface QuizSettings {
@@ -18,6 +40,7 @@ export interface QuizSettings {
   timerMinutes: number;
   shuffleQuestions: boolean;
   shuffleOptions: boolean;
+  showFeedback?: boolean;
 }
 
 export interface StudentRosterEntry {
@@ -152,6 +175,26 @@ export async function updateQuiz(quiz: Quiz): Promise<void> {
     is_active: quiz.isActive,
   }).eq("id", quiz.id);
   if (error) throw error;
+}
+
+export async function duplicateQuiz(quizId: string): Promise<Quiz> {
+  const existing = await getQuizById(quizId);
+  if (!existing) throw new Error("Quiz not found");
+  
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  // ننسخ البيانات بدقة، ونولد كوداً جديداً، ونجعله غير نشط حتى يقوم المعلم بمراجعته.
+  const row = {
+    title: `نسخة من ${existing.title}`,
+    code: generateCode(),
+    questions: existing.questions as any,
+    settings: { ...(existing.settings as any), teacher_id: user?.id },
+    roster: existing.roster ? (existing.roster as any) : null,
+    is_active: false,
+  };
+  const { data, error } = await supabase.from("quizzes").insert(row).select().single();
+  if (error) throw error;
+  return mapRowToQuiz(data);
 }
 
 export async function deleteQuiz(id: string): Promise<void> {

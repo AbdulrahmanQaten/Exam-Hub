@@ -6,10 +6,10 @@ import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import {
-  Plus, Trash2, Save, ArrowRight, Clock, Shuffle, CheckCircle2, XCircle, Upload, FileSpreadsheet, Users, Library, Download,
+  Plus, Trash2, Save, ArrowRight, Clock, Shuffle, CheckCircle2, XCircle, Upload, FileSpreadsheet, Users, Library, Download, Image as ImageIcon, Loader2, X,
 } from "lucide-react";
 import {
-  createQuiz, updateQuiz, getQuizById, generateQuestionId, generateOptionId,
+  createQuiz, updateQuiz, getQuizById, generateQuestionId, generateOptionId, uploadQuestionImage,
   type QuizQuestion, type QuizSettings, type StudentRosterEntry,
 } from "@/lib/quizStore";
 import { toast } from "sonner";
@@ -30,6 +30,7 @@ export default function CreateQuiz() {
     timerMinutes: 10,
     shuffleQuestions: false,
     shuffleOptions: false,
+    showFeedback: false,
   });
   const [roster, setRoster] = useState<StudentRosterEntry[]>([]);
   const [saving, setSaving] = useState(false);
@@ -40,6 +41,7 @@ export default function CreateQuiz() {
   const [excelRows, setExcelRows] = useState<Record<string, any>[]>([]);
   
   const [bankImportOpen, setBankImportOpen] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState<Record<number, boolean>>({});
 
   useEffect(() => {
     if (quizId) {
@@ -102,6 +104,7 @@ export default function CreateQuiz() {
       id: generateQuestionId(),
       type: q.type,
       text: q.text,
+      imageUrl: (q as any).image_url,
       options: q.options.map((opt: any) => ({
         id: opt.id,
         text: opt.text
@@ -109,6 +112,19 @@ export default function CreateQuiz() {
       correctOptionId: q.correct_option_id
     }));
     setQuestions([...questions, ...newQuestions]);
+  };
+
+  const handleQuestionImageUpload = async (qIndex: number, file: File) => {
+    setIsUploadingImage(prev => ({ ...prev, [qIndex]: true }));
+    try {
+      const url = await uploadQuestionImage(file);
+      updateQuestion(qIndex, { imageUrl: url });
+      toast.success("تم إرفاق الصورة بنجاح");
+    } catch (err) {
+      toast.error("فشل رفع الصورة (تأكد من إعدادات Storage)");
+    } finally {
+      setIsUploadingImage(prev => ({ ...prev, [qIndex]: false }));
+    }
   };
 
   const handleRosterUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -215,7 +231,21 @@ export default function CreateQuiz() {
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-xs font-medium text-muted-foreground rounded-full bg-muted px-2 py-0.5">{q.type === "mcq" ? "اختيار من متعدد" : "صح أو خطأ"}</span>
                     </div>
-                    <Input placeholder="نص السؤال" value={q.text} onChange={(e) => updateQuestion(qIndex, { text: e.target.value })} className="text-base font-medium rounded-lg" />
+                    <div className="flex gap-2 items-start">
+                      <Input placeholder="نص السؤال" value={q.text} onChange={(e) => updateQuestion(qIndex, { text: e.target.value })} className="text-base font-medium rounded-lg flex-1" />
+                      <div className="relative">
+                        <input type="file" accept="image/*" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onChange={(e) => { if (e.target.files?.[0]) handleQuestionImageUpload(qIndex, e.target.files[0]); e.target.value = ''; }} disabled={isUploadingImage[qIndex]} title="إرفاق صورة للسؤال" />
+                        <Button variant="outline" type="button" className="shrink-0 h-10 w-10 p-0" disabled={isUploadingImage[qIndex]}>
+                          {isUploadingImage[qIndex] ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4 text-muted-foreground" />}
+                        </Button>
+                      </div>
+                    </div>
+                    {q.imageUrl && (
+                      <div className="mt-3 relative inline-block group">
+                        <img src={q.imageUrl} alt="مرفق السؤال" className="max-h-32 rounded-lg object-contain border bg-muted/30" />
+                        <Button variant="destructive" size="icon" className="absolute -top-2 -right-2 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-md" onClick={() => updateQuestion(qIndex, { imageUrl: undefined })}><X className="h-3 w-3" /></Button>
+                      </div>
+                    )}
                   </div>
                   <Button variant="ghost" size="icon" onClick={() => removeQuestion(qIndex)} tabIndex={-1} className="text-destructive hover:text-destructive shrink-0"><Trash2 className="h-4 w-4" /></Button>
                 </div>
@@ -271,6 +301,10 @@ export default function CreateQuiz() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2"><Shuffle className="h-4 w-4 text-muted-foreground" /><Label>ترتيب عشوائي للإجابات</Label></div>
                   <Switch checked={settings.shuffleOptions} onCheckedChange={(checked) => setSettings({ ...settings, shuffleOptions: checked })} />
+                </div>
+                <div className="flex items-center justify-between pt-2 border-t">
+                  <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-muted-foreground" /><Label>إظهار الإجابات للطالب للتغذية الراجعة</Label></div>
+                  <Switch checked={settings.showFeedback || false} onCheckedChange={(checked) => setSettings({ ...settings, showFeedback: checked })} />
                 </div>
               </div>
 

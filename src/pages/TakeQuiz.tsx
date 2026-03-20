@@ -72,7 +72,16 @@ export default function TakeQuiz() {
     try {
       const result = await submitResult(quiz.id, studentName, finalAnswers, timeTaken, studentId);
       navigate(`/quiz/${code}/complete`, {
-        state: { score: result.score, total: result.totalQuestions, studentName, timeTaken, wasForceSubmitted: forceZero },
+        state: { 
+          score: result.score, 
+          total: result.totalQuestions, 
+          studentName, 
+          timeTaken, 
+          wasForceSubmitted: forceZero,
+          showFeedback: quiz.settings.showFeedback,
+          questions: preparedQuestions,
+          userAnswers: finalAnswers
+        },
       });
     } catch (err) {
       console.error(err);
@@ -266,9 +275,16 @@ export default function TakeQuiz() {
               <Card className="p-6" key={currentQ.id}>
                 <div className="mb-6">
                   <Badge variant="secondary" className="mb-3">{currentQ.type === "mcq" ? "اختيار من متعدد" : "صح أو خطأ"}</Badge>
-                  <h2 className="text-xl font-bold leading-relaxed">{currentQ.text}</h2>
-                </div>
-                <div className="space-y-3">
+                  <div>
+                <h2 className="text-xl md:text-2xl font-bold mb-6 leading-relaxed">{currentQ.text}</h2>
+                {currentQ.imageUrl && (
+                  <div className="mb-8 flex justify-center animate-fade-in relative group">
+                    <img src={currentQ.imageUrl} alt="مرفق توضيحي للسؤال" className="max-h-64 md:max-h-80 w-auto rounded-xl object-contain border-2 shadow-sm bg-muted/10 transition-transform hover:scale-[1.02]" />
+                  </div>
+                )}
+              </div>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
                   {currentQ.options.map((opt, i) => {
                     const selected = answers[currentQ.id] === opt.id;
                     return (

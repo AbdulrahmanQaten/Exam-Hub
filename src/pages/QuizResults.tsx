@@ -145,6 +145,44 @@ export default function QuizResults() {
           </Card>
         )}
 
+        {results.length > 0 && questionStats.length > 0 && (
+          <div className="grid gap-4 md:grid-cols-2 animate-fade-in shadow-sm">
+            <Card className="p-6 border-r-4 border-r-warning bg-warning/5 border-l-0 border-y-0 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-warning/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
+              <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-warning-foreground relative z-10"><Target className="h-5 w-5" /> أصعب سؤال في الاختبار</h3>
+              {(() => {
+                const hardest = questionStats.reduce((prev, current) => (prev.successRate < current.successRate) ? prev : current);
+                return (
+                  <div className="relative z-10">
+                    <p className="font-bold text-lg mb-3 leading-relaxed">{hardest.text}</p>
+                    <div className="flex items-center gap-3">
+                      <Badge variant="destructive" className="font-mono text-sm px-3 py-1">{hardest.successRate}% نسبة نجاح</Badge>
+                      <span className="text-sm font-medium text-muted-foreground">{hardest.wrongCount} طلاب أخطأوا فيه</span>
+                    </div>
+                  </div>
+                );
+              })()}
+            </Card>
+
+            <Card className="p-6 border-r-4 border-r-success bg-success/5 border-l-0 border-y-0 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-success/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
+              <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-success-foreground relative z-10"><Trophy className="h-5 w-5" /> أسهل سؤال في الاختبار</h3>
+              {(() => {
+                const easiest = questionStats.reduce((prev, current) => (prev.successRate > current.successRate) ? prev : current);
+                return (
+                  <div className="relative z-10">
+                    <p className="font-bold text-lg mb-3 leading-relaxed">{easiest.text}</p>
+                    <div className="flex items-center gap-3">
+                      <Badge className="bg-success text-success-foreground font-mono text-sm px-3 py-1 border-transparent">{easiest.successRate}% نسبة نجاح</Badge>
+                      <span className="text-sm font-medium text-muted-foreground">{easiest.correctCount} طلاب أجابوا بشكل صحيح</span>
+                    </div>
+                  </div>
+                );
+              })()}
+            </Card>
+          </div>
+        )}
+
         {results.length > 0 && (
           <div>
             <h2 className="text-lg font-bold mb-4 flex items-center gap-2"><Target className="h-5 w-5" /> تحليل الأسئلة</h2>
