@@ -124,3 +124,15 @@ export async function deleteBankQuestion(id: string): Promise<void> {
   const { error } = await db.from("bank_questions").delete().eq("id", id);
   if (error) throw error;
 }
+
+export async function moveBankQuestions(questionIds: string[], unitId: string | null): Promise<void> {
+  if (questionIds.length === 0) return;
+  const { error } = await db.from("bank_questions").update({ unit_id: unitId }).in("id", questionIds);
+  if (error) throw error;
+}
+
+export async function deleteMultipleBankQuestions(questionIds: string[]): Promise<void> {
+  if (questionIds.length === 0) return;
+  const { error } = await db.from("bank_questions").delete().in("id", questionIds);
+  if (error) throw error;
+}

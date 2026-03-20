@@ -191,39 +191,57 @@ export default function QuizResults() {
 
         {results.length > 0 && questionStats.length > 0 && (
           <div className="grid gap-4 md:grid-cols-2 animate-fade-in shadow-sm">
-            <Card className="p-6 border-r-4 border-r-warning bg-warning/5 border-l-0 border-y-0 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-warning/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
-              <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-warning-foreground relative z-10"><Target className="h-5 w-5" /> أصعب سؤال في الاختبار</h3>
-              {(() => {
-                const hardest = questionStats.reduce((prev, current) => (prev.successRate < current.successRate) ? prev : current);
-                return (
-                  <div className="relative z-10">
-                    <p className="font-bold text-lg mb-3 leading-relaxed">{hardest.text}</p>
-                    <div className="flex items-center gap-3">
-                      <Badge variant="destructive" className="font-mono text-sm px-3 py-1">{hardest.successRate}% نسبة نجاح</Badge>
-                      <span className="text-sm font-medium text-muted-foreground">{hardest.wrongCount} طلاب أخطأوا فيه</span>
-                    </div>
-                  </div>
-                );
-              })()}
-            </Card>
+            {(() => {
+              const easiest = questionStats.reduce((prev, current) => (prev.successRate > current.successRate) ? prev : current);
+              const hardest = questionStats.reduce((prev, current) => (prev.successRate < current.successRate) ? prev : current);
+              const allSame = easiest.successRate === hardest.successRate;
 
-            <Card className="p-6 border-r-4 border-r-success bg-success/5 border-l-0 border-y-0 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-success/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
-              <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-success-foreground relative z-10"><Trophy className="h-5 w-5" /> أسهل سؤال في الاختبار</h3>
-              {(() => {
-                const easiest = questionStats.reduce((prev, current) => (prev.successRate > current.successRate) ? prev : current);
+              if (allSame) {
                 return (
-                  <div className="relative z-10">
-                    <p className="font-bold text-lg mb-3 leading-relaxed">{easiest.text}</p>
-                    <div className="flex items-center gap-3">
-                      <Badge className="bg-success text-success-foreground font-mono text-sm px-3 py-1 border-transparent">{easiest.successRate}% نسبة نجاح</Badge>
-                      <span className="text-sm font-medium text-muted-foreground">{easiest.correctCount} طلاب أجابوا بشكل صحيح</span>
+                  <Card className="p-6 md:col-span-2 border-r-4 border-r-primary bg-primary/5 border-l-0 border-y-0 relative overflow-hidden flex items-center justify-between">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
+                    <div className="relative z-10">
+                      <h3 className="text-lg font-bold mb-2 text-primary flex items-center gap-2"><Trophy className="h-5 w-5" /> تحليل الأداء</h3>
+                      <p className="font-medium text-foreground">
+                        {easiest.successRate === 100 
+                          ? "إتقان كامل! جميع الطلاب أجابوا على كافة الأسئلة بشكل صحيح."
+                          : easiest.successRate === 0
+                          ? "لم يتمكن أي طالب من الإجابة بشكل صحيح على أي من الأسئلة."
+                          : `جميع الأسئلة متساوية في الصعوبة بنسبة نجاح ${easiest.successRate}%.`}
+                      </p>
                     </div>
-                  </div>
+                  </Card>
                 );
-              })()}
-            </Card>
+              }
+
+              return (
+                <>
+                  <Card className="p-6 border-r-4 border-r-orange-500 bg-orange-500/5 border-l-0 border-y-0 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
+                    <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-orange-600 dark:text-orange-400 relative z-10"><Target className="h-5 w-5" /> أصعب سؤال في الاختبار</h3>
+                    <div className="relative z-10">
+                      <p className="font-bold text-lg mb-3 leading-relaxed text-foreground">{hardest.text}</p>
+                      <div className="flex items-center gap-3">
+                        <Badge variant="destructive" className="font-mono text-sm px-3 py-1">{hardest.successRate}% نسبة نجاح</Badge>
+                        <span className="text-sm font-medium text-muted-foreground">{hardest.wrongCount} طلاب أخطأوا فيه</span>
+                      </div>
+                    </div>
+                  </Card>
+
+                  <Card className="p-6 border-r-4 border-r-emerald-500 bg-emerald-500/5 border-l-0 border-y-0 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
+                    <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-emerald-600 dark:text-emerald-400 relative z-10"><Trophy className="h-5 w-5" /> أسهل سؤال في الاختبار</h3>
+                    <div className="relative z-10">
+                      <p className="font-bold text-lg mb-3 leading-relaxed text-foreground">{easiest.text}</p>
+                      <div className="flex items-center gap-3">
+                        <Badge className="bg-emerald-500 text-white font-mono text-sm px-3 py-1 hover:bg-emerald-600 border-transparent">{easiest.successRate}% نسبة نجاح</Badge>
+                        <span className="text-sm font-medium text-muted-foreground">{easiest.correctCount} طلاب أجابوا بشكل صحيح</span>
+                      </div>
+                    </div>
+                  </Card>
+                </>
+              );
+            })()}
           </div>
         )}
 

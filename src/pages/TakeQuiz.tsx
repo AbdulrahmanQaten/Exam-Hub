@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Clock, ArrowLeft, ArrowRight, Send, CheckCircle2, AlertTriangle, List, PanelRightClose } from "lucide-react";
 import {
-  getQuizById, submitResult, shuffleArray, addActiveStudent,
+  getQuizById, getQuizByCode, submitResult, shuffleArray, addActiveStudent,
   type Quiz, type QuizQuestion,
 } from "@/lib/quizStore";
 import { toast } from "sonner";
@@ -45,10 +45,13 @@ export default function TakeQuiz() {
       navigate(`/quiz/${code}`);
       return;
     }
-    getQuizById(quizId).then((found) => {
+    if (!code) return;
+    getQuizByCode(code).then((found) => {
       if (!found) { navigate("/"); return; }
       setQuiz(found);
-      addActiveStudent(quizId, studentName, studentId);
+      if (quizId && studentName) {
+        addActiveStudent(quizId, studentName, studentId);
+      }
 
       let questions = [...found.questions];
       if (found.settings.shuffleQuestions) questions = shuffleArray(questions);
@@ -79,7 +82,7 @@ export default function TakeQuiz() {
           timeTaken, 
           wasForceSubmitted: forceZero,
           showFeedback: quiz.settings.showFeedback,
-          questions: preparedQuestions,
+          questions: result.questions || preparedQuestions,
           userAnswers: finalAnswers
         },
       });

@@ -76,6 +76,7 @@ export interface StudentResult {
   totalQuestions: number;
   completedAt: string;
   timeTaken: number;
+  questions?: QuizQuestion[];
 }
 
 function generateCode(): string {
@@ -145,9 +146,20 @@ export async function getQuizById(id: string): Promise<Quiz | undefined> {
 }
 
 export async function getQuizByCode(code: string): Promise<Quiz | undefined> {
-  const { data, error } = await supabase.from("quizzes").select("*").eq("code", code).eq("is_active", true).maybeSingle();
+  const { data, error } = await supabase.rpc("get_public_quiz", { p_code: code });
   if (error) throw error;
-  return data ? mapRowToQuiz(data) : undefined;
+  if (!data) return undefined;
+  
+  return {
+    id: data.id,
+    title: data.title,
+    code: data.code,
+    questions: data.questions as QuizQuestion[],
+    settings: data.settings as QuizSettings,
+    createdAt: data.created_at,
+    isActive: data.isActive,
+    roster: data.roster as StudentRosterEntry[] | undefined,
+  };
 }
 
 export async function createQuiz(title: string, questions: QuizQuestion[], settings: QuizSettings, roster?: StudentRosterEntry[]): Promise<Quiz> {
@@ -210,30 +222,28 @@ export async function getResultsForQuiz(quizId: string): Promise<StudentResult[]
 }
 
 export async function submitResult(quizId: string, studentName: string, answers: Record<string, string>, timeTaken: number, studentId?: string): Promise<StudentResult> {
-  const quiz = await getQuizById(quizId);
-  if (!quiz) throw new Error("Quiz not found");
-
-  let score = 0;
-  quiz.questions.forEach((q) => {
-    if (answers[q.id] === q.correctOptionId) score++;
+  const { data, error } = await supabase.rpc("submit_quiz_result", {
+    p_quiz_id: quizId,
+    p_student_name: studentName,
+    p_student_id: studentId || null,
+    p_answers: answers,
+    p_client_time_taken: timeTaken
   });
-
-  const row = {
-    quiz_id: quizId,
-    student_name: studentName,
-    student_id: studentId || null,
-    answers: answers as any,
-    score,
-    total_questions: quiz.questions.length,
-    time_taken: timeTaken,
-  };
-  const { data, error } = await supabase.from("student_results").insert(row).select().single();
+  
   if (error) throw error;
 
-  // Remove from active students
-  await removeActiveStudent(quizId, studentName);
-
-  return mapRowToResult(data);
+  return {
+    id: data.id,
+    quizId: data.quiz_id,
+    studentName: data.student_name,
+    studentId: data.student_id,
+    answers: data.answers,
+    score: data.score,
+    totalQuestions: data.total_questions,
+    completedAt: new Date().toISOString(),
+    timeTaken: data.time_taken,
+    questions: data.questions as QuizQuestion[],
+  };
 }
 
 // Active students
