@@ -240,7 +240,36 @@ export async function submitResult(quizId: string, studentName: string, answers:
 export async function getActiveStudentsForQuiz(quizId: string): Promise<ActiveStudent[]> {
   const { data, error } = await supabase.from("active_students").select("*").eq("quiz_id", quizId);
   if (error) throw error;
-  return (data || []).map(mapRowToActive);
+  
+  const activeList = (data || []).map(mapRowToActive);
+  if (activeList.length === 0) return [];
+
+  // جلب إعدادات الاختبار للتحقق من المهلة الزمنية
+  const quiz = await getQuizById(quizId);
+  if (!quiz) return activeList;
+
+  const now = new Date();
+  
+  return activeList.filter(student => {
+    const startTime = new Date(student.startedAt);
+    const diffMinutes = (now.getTime() - startTime.getTime()) / 60000;
+    
+    if (quiz.settings.timerEnabled) {
+      // إعطاء مهلة إضافية دقيقتين للمزامنة بعد انتهاء الوقت
+      if (diffMinutes > quiz.settings.timerMinutes + 2) {
+         // تنظيف الطالب من قاعدة البيانات في الخلفية
+         removeActiveStudent(quizId, student.studentName).catch(console.error);
+         return false; 
+      }
+    } else {
+      // إذا لم يكن هناك مؤقت، يعتبر منتهي الصلاحية بعد 4 ساعات
+      if (diffMinutes > 240) {
+         removeActiveStudent(quizId, student.studentName).catch(console.error);
+         return false;
+      }
+    }
+    return true;
+  });
 }
 
 export async function addActiveStudent(quizId: string, studentName: string, studentId?: string): Promise<void> {

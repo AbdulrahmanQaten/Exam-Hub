@@ -10,7 +10,11 @@ import {
   ArrowRight, Users, BarChart3, Clock, Trophy, RefreshCw, Download,
   TrendingDown, Target, CheckCircle2, XCircle, Loader2,
 } from "lucide-react";
-import { getQuizById, getResultsForQuiz, getActiveStudentsForQuiz, type Quiz, type StudentResult, type ActiveStudent } from "@/lib/quizStore";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { getQuizById, getResultsForQuiz, getActiveStudentsForQuiz, removeActiveStudent, type Quiz, type StudentResult, type ActiveStudent } from "@/lib/quizStore";
 import * as XLSX from "xlsx";
 
 export default function QuizResults() {
@@ -20,6 +24,7 @@ export default function QuizResults() {
   const [results, setResults] = useState<StudentResult[]>([]);
   const [activeStudents, setActiveStudents] = useState<ActiveStudent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [clearTarget, setClearTarget] = useState<string | null>(null);
 
   const loadData = async () => {
     if (!quizId) return;
@@ -78,6 +83,23 @@ export default function QuizResults() {
     XLSX.writeFile(wb, `${quiz.title} - النتائج.xlsx`);
   };
 
+  const handleClearActiveStudents = async (quizId: string) => {
+    if (!quiz || activeStudents.length === 0) return;
+    try {
+      toast.info("جاري إخلاء الطلاب المعلقين...");
+      setClearTarget(null);
+      const previousActive = [...activeStudents];
+      setActiveStudents([]); // Optimistic update
+      
+      await Promise.all(previousActive.map(s => removeActiveStudent(quizId, s.studentName)));
+      loadData();
+      toast.success("تم إخلاء الطلاب المعلقين بنجاح");
+    } catch {
+      toast.error("حدث خطأ أثناء إخلاء الطلاب");
+      loadData(); // Revert on failure
+    }
+  };
+
   if (loading) {
     return <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
@@ -99,6 +121,23 @@ export default function QuizResults() {
 
   return (
     <div className="min-h-[calc(100vh-4rem)]">
+      <AlertDialog open={!!clearTarget} onOpenChange={(open) => !open && setClearTarget(null)}>
+        <AlertDialogContent className="text-right" dir="rtl">
+          <AlertDialogHeader className="text-right sm:text-right">
+            <AlertDialogTitle>إخلاء الطلاب المعلقين</AlertDialogTitle>
+            <AlertDialogDescription>
+              هل أنت متأكد من رغبتك في إخلاء هؤلاء الطلاب من قائمة (يختبرون الآن)؟ لن تضيع أية نتائج محفوظة أو إجابات تم إرسالها مسبقاً، سيتم فقط إخراجهم من الشاشة.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row-reverse gap-2">
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction onClick={() => clearTarget && handleClearActiveStudents(clearTarget)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              إخلاء
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <div className="border-b bg-card">
         <div className="container py-6">
           <div className="flex items-center gap-3 mb-2">
@@ -126,7 +165,12 @@ export default function QuizResults() {
       <div className="container py-8 space-y-8">
         {activeStudents.length > 0 && (
           <Card className="p-5 border-primary/30 bg-primary/5">
-            <h2 className="text-lg font-bold mb-3 flex items-center gap-2"><Loader2 className="h-5 w-5 animate-spin text-primary" /> طلاب يختبرون الآن ({activeStudents.length})</h2>
+            <div className="flex items-center justify-between mb-3 border-b border-primary/10 pb-2">
+              <h2 className="text-lg font-bold flex items-center gap-2"><Loader2 className="h-5 w-5 animate-spin text-primary" /> طلاب يختبرون الآن ({activeStudents.length})</h2>
+              <Button size="sm" variant="outline" className="text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive h-8 text-xs font-bold" onClick={() => setClearTarget(quiz.id)}>
+                إخلاء المعلقين
+              </Button>
+            </div>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {activeStudents.map((s, i) => {
                 const elapsed = Math.round((Date.now() - new Date(s.startedAt).getTime()) / 1000);

@@ -17,9 +17,11 @@ import * as XLSX from "xlsx";
 import { ExcelColumnSelector } from "@/components/ExcelColumnSelector";
 import { BankImportDialog } from "@/components/BankImportDialog";
 import { BankQuestion } from "@/lib/bankStore";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function CreateQuiz() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { quizId } = useParams<{ quizId: string }>();
   const isEditing = !!quizId;
 
@@ -115,13 +117,17 @@ export default function CreateQuiz() {
   };
 
   const handleQuestionImageUpload = async (qIndex: number, file: File) => {
+    if (!user) {
+      toast.info("عذراً! ميزة رفع الصور متاحة فقط للمعلمين المسجلين. قم بإنشاء حساب مجاني لتفعيلها.");
+      return;
+    }
     setIsUploadingImage(prev => ({ ...prev, [qIndex]: true }));
     try {
       const url = await uploadQuestionImage(file);
       updateQuestion(qIndex, { imageUrl: url });
       toast.success("تم إرفاق الصورة بنجاح");
     } catch (err) {
-      toast.error("فشل رفع الصورة (تأكد من إعدادات Storage)");
+      toast.error("حدث خطأ أثناء الرفع! يرجى التأكد من إعداد سياسات الحماية (Policies) للسلة في Supabase لتسمح بالرفع للمسجلين.");
     } finally {
       setIsUploadingImage(prev => ({ ...prev, [qIndex]: false }));
     }
@@ -234,10 +240,18 @@ export default function CreateQuiz() {
                     <div className="flex gap-2 items-start">
                       <Input placeholder="نص السؤال" value={q.text} onChange={(e) => updateQuestion(qIndex, { text: e.target.value })} className="text-base font-medium rounded-lg flex-1" />
                       <div className="relative">
-                        <input type="file" accept="image/*" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onChange={(e) => { if (e.target.files?.[0]) handleQuestionImageUpload(qIndex, e.target.files[0]); e.target.value = ''; }} disabled={isUploadingImage[qIndex]} title="إرفاق صورة للسؤال" />
-                        <Button variant="outline" type="button" className="shrink-0 h-10 w-10 p-0" disabled={isUploadingImage[qIndex]}>
-                          {isUploadingImage[qIndex] ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4 text-muted-foreground" />}
-                        </Button>
+                        {!user ? (
+                          <Button variant="outline" type="button" className="shrink-0 h-10 w-10 p-0" title="ميزة إرفاق الصور متاحة للمسجلين فقط" onClick={() => toast.info("عذراً! ميزة إرفاق الصور متاحة فقط للمعلمين المسجلين في المنصة.")}>
+                            <ImageIcon className="h-4 w-4 text-muted-foreground/40" />
+                          </Button>
+                        ) : (
+                          <>
+                            <input type="file" accept="image/*" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onChange={(e) => { if (e.target.files?.[0]) handleQuestionImageUpload(qIndex, e.target.files[0]); e.target.value = ''; }} disabled={isUploadingImage[qIndex]} title="إرفاق صورة للسؤال" />
+                            <Button variant="outline" type="button" className="shrink-0 h-10 w-10 p-0" disabled={isUploadingImage[qIndex]}>
+                              {isUploadingImage[qIndex] ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4 text-muted-foreground" />}
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </div>
                     {q.imageUrl && (

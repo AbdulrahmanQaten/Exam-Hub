@@ -13,8 +13,9 @@ import {
   Plus, Trash2, Eye, Copy, Share2, Users, Clock, Shuffle, Check,
   BarChart3, ClipboardList, ToggleRight, ToggleLeft, Pencil, FileSpreadsheet, Loader2, Search, Printer, CopyPlus,
 } from "lucide-react";
-import { getQuizzes, deleteQuiz, updateQuiz, duplicateQuiz, getResultsForQuiz, getActiveStudentsForQuiz, type Quiz, type StudentResult, type ActiveStudent } from "@/lib/quizStore";
+import { getQuizzes, deleteQuiz, updateQuiz, duplicateQuiz, getResultsForQuiz, getActiveStudentsForQuiz, removeActiveStudent, type Quiz, type StudentResult, type ActiveStudent } from "@/lib/quizStore";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
 
 type FilterStatus = "all" | "active" | "inactive";
 type FilterType = "all" | "roster" | "noroster";
@@ -26,12 +27,14 @@ interface QuizWithStats extends Quiz {
 
 export default function TeacherDashboard() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [quizzesWithStats, setQuizzesWithStats] = useState<QuizWithStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
   const [filterType, setFilterType] = useState<FilterType>("all");
+  const [clearTarget, setClearTarget] = useState<string | null>(null);
 
   const loadData = async () => {
     try {
@@ -52,10 +55,11 @@ export default function TeacherDashboard() {
   };
 
   useEffect(() => {
+    setLoading(true);
     loadData();
     const interval = setInterval(loadData, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [user]);
 
   const filteredQuizzes = useMemo(() => {
     return quizzesWithStats.filter((q) => {
@@ -107,6 +111,21 @@ export default function TeacherDashboard() {
     });
   };
 
+  const handleClearActiveStudents = async (quizId: string) => {
+    const quiz = quizzesWithStats.find(q => q.id === quizId);
+    if (!quiz || quiz.activeStudents.length === 0) return;
+    
+    try {
+      toast.info("جاري إخلاء الطلاب المعلقين...");
+      await Promise.all(quiz.activeStudents.map(s => removeActiveStudent(quizId, s.studentName)));
+      loadData();
+      toast.success("تم إخلاء الطلاب المعلقين بنجاح");
+      setClearTarget(null);
+    } catch {
+      toast.error("حدث خطأ أثناء إخلاء الطلاب");
+    }
+  };
+
   const totalStudents = quizzesWithStats.reduce((sum, q) => sum + q.results.length, 0);
 
   if (loading) {
@@ -131,6 +150,23 @@ export default function TeacherDashboard() {
             <AlertDialogCancel>إلغاء</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               حذف
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!clearTarget} onOpenChange={(open) => !open && setClearTarget(null)}>
+        <AlertDialogContent className="text-right" dir="rtl">
+          <AlertDialogHeader className="text-right sm:text-right">
+            <AlertDialogTitle>إخلاء الطلاب المعلقين</AlertDialogTitle>
+            <AlertDialogDescription>
+              هل أنت متأكد من رغبتك في إخلاء هؤلاء الطلاب من قائمة (يختبرون الآن)؟ لن تضيع أية نتائج محفوظة أو إجابات تم إرسالها مسبقاً، سيتم فقط إخراجهم من الشاشة.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row-reverse gap-2">
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction onClick={() => clearTarget && handleClearActiveStudents(clearTarget)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              إخلاء
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -217,15 +253,16 @@ export default function TeacherDashboard() {
 
                       {quiz.activeStudents.length > 0 && (
                         <div className="mb-3 flex items-center gap-2 rounded-lg bg-primary/5 border border-primary/20 p-2">
-                          <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                          <span className="text-sm font-medium text-primary">{quiz.activeStudents.length} يختبرون الآن</span>
-                          <div className="flex gap-1 mr-auto">
-                            {quiz.activeStudents.slice(0, 3).map((s, i) => (
-                              <Badge key={i} variant="outline" className="text-xs py-0">{s.studentName}</Badge>
+                          <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" />
+                          <span className="text-sm font-medium text-primary line-clamp-1">{quiz.activeStudents.length} يختبرون الآن</span>
+                          <div className="flex gap-1 mr-auto flex-wrap justify-end">
+                            {quiz.activeStudents.slice(0, 2).map((s, i) => (
+                              <Badge key={i} variant="outline" className="text-xs py-0 truncate max-w-[80px]">{s.studentName}</Badge>
                             ))}
-                            {quiz.activeStudents.length > 3 && (
-                              <Badge variant="outline" className="text-xs py-0">+{quiz.activeStudents.length - 3}</Badge>
+                            {quiz.activeStudents.length > 2 && (
+                              <Badge variant="outline" className="text-xs py-0">+{quiz.activeStudents.length - 2}</Badge>
                             )}
+                            <Button variant="ghost" size="sm" onClick={() => setClearTarget(quiz.id)} className="h-5 px-2 text-[10px] text-destructive hover:bg-destructive/10 hover:text-destructive ml-1">إخلاء</Button>
                           </div>
                         </div>
                       )}
@@ -245,7 +282,6 @@ export default function TeacherDashboard() {
 
                       <div className="flex flex-wrap gap-2">
                         <Button variant="outline" size="sm" onClick={() => copyLink(quiz.code)} className="gap-1.5 rounded-lg"><Share2 className="h-3.5 w-3.5" /> نسخ الرابط</Button>
-                        <Button variant="outline" size="sm" onClick={() => navigate(`/teacher/print/${quiz.id}`)} className="gap-1.5 rounded-lg"><Printer className="h-3.5 w-3.5" /> طباعة</Button>
                         <Button variant="outline" size="sm" onClick={() => navigate(`/teacher/results/${quiz.id}`)} className="gap-1.5 rounded-lg"><Eye className="h-3.5 w-3.5" /> النتائج</Button>
                         <Button variant="outline" size="sm" onClick={() => navigate(`/teacher/edit/${quiz.id}`)} className="gap-1.5 rounded-lg"><Pencil className="h-3.5 w-3.5" /> تعديل</Button>
                         <Button variant="outline" size="sm" onClick={() => handleDuplicate(quiz.id)} className="gap-1.5 rounded-lg"><CopyPlus className="h-3.5 w-3.5" /> استنساخ</Button>

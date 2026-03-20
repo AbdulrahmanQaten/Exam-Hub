@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Plus, Trash2, Library, ChevronLeft } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { QuestionBank, getBanks, createBank, deleteBank } from "@/lib/bankStore";
@@ -18,6 +19,7 @@ export default function BankDashboard() {
   const [newBankTitle, setNewBankTitle] = useState("");
   const [newBankDesc, setNewBankDesc] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -56,13 +58,13 @@ export default function BankDashboard() {
     }
   };
 
-  const handleDeleteBank = async (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (confirm("هل أنت متأكد من حذف هذا البنك نهائياً؟")) {
+  const handleDeleteBank = async () => {
+    if (deleteTarget) {
       try {
-        await deleteBank(id);
-        setBanks(banks.filter((b) => b.id !== id));
+        await deleteBank(deleteTarget);
+        setBanks(banks.filter((b) => b.id !== deleteTarget));
         toast.success("تم الحذف بنجاح");
+        setDeleteTarget(null);
       } catch (err: any) {
         toast.error("حدث خطأ أثناء الحذف");
       }
@@ -73,6 +75,23 @@ export default function BankDashboard() {
 
   return (
     <div className="container py-8">
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent className="text-right" dir="rtl">
+          <AlertDialogHeader className="text-right sm:text-right">
+            <AlertDialogTitle>هل أنت متأكد من حذف هذا البنك؟</AlertDialogTitle>
+            <AlertDialogDescription>
+              سيتم حذف البنك وجميع الأسئلة والوحدات داخله بشكل نهائي. لا يمكنك التراجع عن هذا الإجراء أبداً.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row-reverse gap-2">
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteBank} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              حذف
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
@@ -128,7 +147,7 @@ export default function BankDashboard() {
                 <div className="h-10 w-10 bg-primary/10 text-primary rounded-xl flex items-center justify-center shrink-0">
                   <Library className="h-5 w-5" />
                 </div>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-destructive transition-opacity" onClick={(e) => handleDeleteBank(bank.id, e)}>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-destructive transition-opacity" onClick={(e) => { e.stopPropagation(); setDeleteTarget(bank.id); }}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
