@@ -34,8 +34,11 @@ export default function TakeQuiz() {
   const [showExitWarning, setShowExitWarning] = useState(false);
   const [slideDirection, setSlideDirection] = useState<"left" | "right">("left");
   const [isAnimating, setIsAnimating] = useState(false);
+  const [showCheatWarning, setShowCheatWarning] = useState(false);
   const hasSubmittedRef = useRef(false);
   const answersRef = useRef<Record<string, string>>({});
+  const violationsRef = useRef(0);
+  const lastViolationTime = useRef(0);
 
   // Keep answersRef in sync
   useEffect(() => { answersRef.current = answers; }, [answers]);
@@ -71,7 +74,8 @@ export default function TakeQuiz() {
     hasSubmittedRef.current = true;
     if (timerRef.current) clearInterval(timerRef.current);
     const timeTaken = Math.round((Date.now() - startTime) / 1000);
-    const finalAnswers = forceZero ? {} : answersRef.current;
+    // إرفاق عدد المخالفات كإجابة مخفية للمعلم ليراها لاحقاً
+    const finalAnswers = forceZero ? { _violations: violationsRef.current.toString() } : { ...answersRef.current, _violations: violationsRef.current.toString() };
     try {
       const result = await submitResult(quiz.id, studentName, finalAnswers, timeTaken, studentId);
       navigate(`/quiz/${code}/complete`, {
@@ -102,16 +106,40 @@ export default function TakeQuiz() {
   }, []);
 
   useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.hidden && !hasSubmittedRef.current) setShowExitWarning(true);
+    const handleLeave = () => {
+      if (hasSubmittedRef.current) return;
+      
+      // نمنع تسجيل مخالفات متكررة في نفس الثانية (مثل تداخل أحداث blur و hidden)
+      const now = Date.now();
+      if (now - lastViolationTime.current > 2000) {
+        violationsRef.current += 1;
+        lastViolationTime.current = now;
+        setShowCheatWarning(true);
+      }
     };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) handleLeave();
+    };
+
     document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("blur", handleLeave); // تم إضافة حدث blur لالتقاط الشاشة المنقسمة
+    
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("blur", handleLeave);
+    };
   }, []);
 
   useEffect(() => {
     const handlePopState = (e: PopStateEvent) => {
-      if (!hasSubmittedRef.current) { e.preventDefault(); window.history.pushState(null, "", window.location.href); setShowExitWarning(true); }
+      if (!hasSubmittedRef.current) { 
+        e.preventDefault(); 
+        window.history.pushState(null, "", window.location.href); 
+        violationsRef.current += 1;
+        toast.error("🚨 محاولة خروج غير مصرح بها! تم تسجيل المحاولة.", { duration: 5000, position: 'top-center' });
+        setShowExitWarning(true); 
+      }
     };
     window.history.pushState(null, "", window.location.href);
     window.addEventListener("popstate", handlePopState);
@@ -196,6 +224,23 @@ export default function TakeQuiz() {
           <AlertDialogFooter className="flex-row-reverse gap-2">
             <AlertDialogCancel>متابعة الاختبار</AlertDialogCancel>
             <AlertDialogAction onClick={() => handleSubmit(true)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">مغادرة (صفر)</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showCheatWarning} onOpenChange={setShowCheatWarning}>
+        <AlertDialogContent className="text-right border-destructive/30" dir="rtl">
+          <AlertDialogHeader className="text-right sm:text-right">
+            <AlertDialogTitle className="flex items-center gap-3 text-destructive text-xl"><AlertTriangle className="h-8 w-8 animate-pulse" /> تحذير أمني صارم!</AlertDialogTitle>
+            <AlertDialogDescription className="text-base font-medium mt-3 leading-relaxed text-foreground">
+              لقد قمت بمغادرة شاشة الاختبار أو فتح تطبيق آخر.
+              <br /><br />
+              <span className="text-destructive font-bold text-lg">تم تسجيل محاولة خروجك وإرسالها لمعلمك!</span>
+              <br /><br />يرجى البقاء في هذه الصفحة وعدم فتح تطبيقات أخرى حتى يكتمل تسليم إجاباتك بنجاح.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="sm:justify-start">
+            <AlertDialogCancel className="bg-primary text-primary-foreground hover:bg-primary/90 font-bold w-full sm:w-auto h-12 text-md border-none">أتعهد بعدم المغادرة مجدداً</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

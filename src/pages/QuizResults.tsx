@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/table";
 import {
   ArrowRight, Users, BarChart3, Clock, Trophy, RefreshCw, Download,
-  TrendingDown, Target, CheckCircle2, XCircle, Loader2, Eye
+  TrendingDown, Target, CheckCircle2, XCircle, Loader2, Eye, AlertTriangle
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
@@ -57,6 +57,7 @@ export default function QuizResults() {
       "الدرجة": `${r.score}/${r.totalQuestions}`,
       "النسبة المئوية": `${Math.round((r.score / r.totalQuestions) * 100)}%`,
       "الوقت": formatTime(r.timeTaken),
+      "النزاهة (مخالفات)": parseInt(r.answers._violations || "0"),
       "الحالة": Math.round((r.score / r.totalQuestions) * 100) >= 50 ? "ناجح" : "راسب",
       "تاريخ الإكمال": new Date(r.completedAt).toLocaleString("ar-SA"),
     }));
@@ -274,6 +275,7 @@ export default function QuizResults() {
                     <TableHead className="text-right">الدرجة</TableHead>
                     <TableHead className="text-right">النسبة</TableHead>
                     <TableHead className="text-right">الوقت</TableHead>
+                    <TableHead className="text-right">النزاهة (مكافح الغش)</TableHead>
                     <TableHead className="text-right">الحالة</TableHead>
                     <TableHead className="text-center w-24">إجراء</TableHead>
                   </TableRow>
@@ -293,6 +295,17 @@ export default function QuizResults() {
                         <TableCell>{r.score}/{r.totalQuestions}</TableCell>
                         <TableCell className="font-bold">{pct}%</TableCell>
                         <TableCell className="font-mono text-sm">{formatTime(r.timeTaken)}</TableCell>
+                        <TableCell>
+                          {parseInt(r.answers._violations || "0") > 0 ? (
+                            <Badge variant="destructive" className="gap-1.5 bg-red-500 font-bold hover:bg-red-600" title="عدد مرات الخروج من الاختبار">
+                              <AlertTriangle className="h-3.5 w-3.5" /> {r.answers._violations} مخالفات
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="border-emerald-500/30 text-emerald-600 bg-emerald-500/5 gap-1.5 font-bold">
+                              <CheckCircle2 className="h-3.5 w-3.5" /> سليم
+                            </Badge>
+                          )}
+                        </TableCell>
                         <TableCell><Badge variant={pct >= 50 ? "default" : "destructive"}>{pct >= 50 ? "ناجح" : "راسب"}</Badge></TableCell>
                         <TableCell className="text-center">
                           <Button variant="ghost" size="sm" onClick={() => setSelectedResult(r)} className="hover:bg-primary/10 hover:text-primary h-8 px-2 gap-1 rounded-lg">
@@ -312,8 +325,16 @@ export default function QuizResults() {
       <Dialog open={!!selectedResult} onOpenChange={(o) => (!o && setSelectedResult(null))}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto text-right" dir="rtl">
           <DialogHeader className="text-right sm:text-right">
-            <DialogTitle className="flex items-center gap-2 text-xl pb-2 border-b">
-              <Eye className="h-6 w-6 text-primary" /> إجابات الطالب: <span className="text-primary">{selectedResult?.studentName}</span>
+            <DialogTitle className="flex flex-col gap-3 pb-3 border-b">
+              <div className="flex items-center gap-2 text-xl">
+                <Eye className="h-6 w-6 text-primary" /> إجابات الطالب: <span className="text-primary">{selectedResult?.studentName}</span>
+              </div>
+              {selectedResult?.answers && parseInt(selectedResult.answers._violations || "0") > 0 && (
+                <div className="flex items-center gap-3 text-sm font-bold text-destructive bg-destructive/10 p-3 border border-destructive/20 rounded-xl mt-1">
+                  <AlertTriangle className="h-5 w-5 animate-pulse" /> 
+                  تنبيه: تشير السجلات إلى أن هذا الطالب قام بمغادرة شاشة الاختبار والانتقال لتطبيقات أخرى ({selectedResult.answers._violations} مرات)!
+                </div>
+              )}
             </DialogTitle>
           </DialogHeader>
           <div className="flex flex-wrap gap-2 mb-4 border-b pb-4">

@@ -48,13 +48,13 @@ export default function Index() {
             <p className="mx-auto mb-10 max-w-xl text-lg text-primary-foreground/80">
               أنشئ اختبارات اختيار من متعدد وصح وخطأ، شاركها مع طلابك عبر رمز بسيط، وتابع النتائج لحظياً
             </p>
-            <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+            <div className="flex flex-row items-center justify-center gap-2 sm:gap-4 w-full px-2">
               <Button
                 size="lg"
                 onClick={() => navigate("/teacher")}
-                className="gap-2 rounded-xl bg-primary-foreground text-primary hover:bg-primary-foreground/90 px-8 text-base font-bold shadow-lg"
+                className="gap-2 rounded-xl bg-primary-foreground text-primary hover:bg-primary-foreground/90 px-3 sm:px-8 text-sm sm:text-base font-bold shadow-lg w-1/2 sm:w-auto"
               >
-                <ClipboardList className="h-5 w-5" />
+                <ClipboardList className="h-5 w-5 shrink-0 hidden sm:block" />
                 لوحة المعلم
               </Button>
               {user ? (
@@ -62,20 +62,20 @@ export default function Index() {
                   size="lg"
                   variant="outline"
                   onClick={() => navigate("/banks")}
-                  className="gap-2 rounded-xl bg-transparent border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground px-8 text-base font-bold shadow-lg backdrop-blur-sm"
+                  className="gap-2 rounded-xl bg-transparent border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground px-3 sm:px-8 text-sm sm:text-base font-bold shadow-lg backdrop-blur-sm w-1/2 sm:w-auto whitespace-nowrap"
                 >
-                  <Library className="h-5 w-5" />
-                  بنوك الأسئلة
+                  <Library className="h-5 w-5 shrink-0 hidden sm:block" />
+                  بنك الأسئلة
                 </Button>
               ) : (
                 <Button
                   size="lg"
                   variant="outline"
                   onClick={() => navigate("/auth")}
-                  className="gap-2 rounded-xl bg-transparent border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground px-8 text-base font-bold shadow-lg backdrop-blur-sm"
+                  className="gap-2 rounded-xl bg-transparent border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground px-3 sm:px-8 text-sm sm:text-base font-bold shadow-lg backdrop-blur-sm w-1/2 sm:w-auto whitespace-nowrap"
                 >
-                  <UserPlus className="h-5 w-5" />
-                  سجل للحصول على الميزات
+                  <UserPlus className="h-5 w-5 shrink-0 hidden sm:block" />
+                  حساب المعلم
                 </Button>
               )}
             </div>
@@ -176,20 +176,7 @@ export default function Index() {
         </div>
       </section>
 
-      {/* About Us Section */}
-      <section className="bg-muted/30 py-20 border-t">
-        <div className="container max-w-4xl text-center">
-          <h2 className="mb-6 text-3xl font-bold">من نحن؟</h2>
-          <p className="text-lg text-muted-foreground leading-relaxed mb-8">
-            نحن دورية التميز <strong>Exam Hub</strong>، صُممنا المنصة بشغف لخدمة المعلمين والطلاب في بيئة تعليمية ذكية وخالية من التعقيد. هدفنا الأساسي هو توفير أداة قوية وسريعة لبناء الاختبارات وإدارتها دون الحاجة لخطوات تسجيل مطولة للطلاب أو إعدادات معقدة.
-          </p>
-          <div className="inline-flex flex-wrap items-center justify-center p-1 bg-background rounded-2xl border gap-2">
-            <span className="px-4 py-2 text-sm font-medium">تطوير مبني على احتياجاتكم</span>
-            <span className="px-4 py-2 text-sm font-medium border-r sm:border-y-0 border-y">سرعة وأداء فائقان</span>
-            <span className="px-4 py-2 text-sm font-medium border-r">بيئة عربية وخاصة</span>
-          </div>
-        </div>
-      </section>
+      {/* About Us section has been temporarily suspended/removed here */}
     </div>
   );
 }

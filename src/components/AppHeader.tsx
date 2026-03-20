@@ -46,17 +46,17 @@ export function AppHeader() {
             </Button>
           )}
 
-          <Button variant="ghost" size="sm" onClick={() => navigate("/how-it-works")} className="gap-2 hidden sm:flex">
-            <HelpCircle className="h-4 w-4" />
-            كيف يعمل؟
-          </Button>
-
           {!isTeacher && (
             <Button variant="ghost" size="sm" onClick={() => navigate("/teacher")} className="gap-2">
               <LayoutDashboard className="h-4 w-4" />
               المعلم
             </Button>
           )}
+
+          <Button variant="ghost" size="sm" onClick={() => navigate("/how-it-works")} className="gap-2 px-2 sm:px-3">
+            <HelpCircle className="h-4 w-4" />
+            <span className="hidden sm:inline-block">كيف يعمل؟</span>
+          </Button>
           
           {user && (
             <Button variant="ghost" size="sm" onClick={() => navigate("/banks")} className="gap-2 text-primary">
