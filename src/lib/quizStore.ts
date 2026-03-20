@@ -1,3 +1,5 @@
+import { supabase } from "@/integrations/supabase/client";
+
 export interface QuizOption {
   id: string;
   text: string;
@@ -46,97 +48,117 @@ export interface StudentResult {
   quizId: string;
   studentName: string;
   studentId?: string;
-  answers: Record<string, string>; // questionId -> selectedOptionId
+  answers: Record<string, string>;
   score: number;
   totalQuestions: number;
   completedAt: string;
-  timeTaken: number; // seconds
-}
-
-function generateId(): string {
-  return Math.random().toString(36).substring(2, 11);
+  timeTaken: number;
 }
 
 function generateCode(): string {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
 }
 
-const QUIZZES_KEY = "quizapp_quizzes";
-const RESULTS_KEY = "quizapp_results";
-const ACTIVE_KEY = "quizapp_active_students";
-
-export function getQuizzes(): Quiz[] {
-  const data = localStorage.getItem(QUIZZES_KEY);
-  return data ? JSON.parse(data) : [];
+function generateId(): string {
+  return Math.random().toString(36).substring(2, 11);
 }
 
-export function saveQuizzes(quizzes: Quiz[]) {
-  localStorage.setItem(QUIZZES_KEY, JSON.stringify(quizzes));
+// Map DB row to Quiz interface
+function mapRowToQuiz(row: any): Quiz {
+  return {
+    id: row.id,
+    title: row.title,
+    code: row.code,
+    questions: row.questions as QuizQuestion[],
+    settings: row.settings as QuizSettings,
+    createdAt: row.created_at,
+    isActive: row.is_active,
+    roster: row.roster as StudentRosterEntry[] | undefined,
+  };
 }
 
-export function createQuiz(title: string, questions: QuizQuestion[], settings: QuizSettings, roster?: StudentRosterEntry[]): Quiz {
-  const quiz: Quiz = {
-    id: generateId(),
+function mapRowToResult(row: any): StudentResult {
+  return {
+    id: row.id,
+    quizId: row.quiz_id,
+    studentName: row.student_name,
+    studentId: row.student_id || undefined,
+    answers: row.answers as Record<string, string>,
+    score: row.score,
+    totalQuestions: row.total_questions,
+    completedAt: row.completed_at,
+    timeTaken: row.time_taken,
+  };
+}
+
+function mapRowToActive(row: any): ActiveStudent {
+  return {
+    quizId: row.quiz_id,
+    studentName: row.student_name,
+    studentId: row.student_id || undefined,
+    startedAt: row.started_at,
+  };
+}
+
+// ========= ASYNC API =========
+
+export async function getQuizzes(): Promise<Quiz[]> {
+  const { data, error } = await supabase.from("quizzes").select("*").order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data || []).map(mapRowToQuiz);
+}
+
+export async function getQuizById(id: string): Promise<Quiz | undefined> {
+  const { data, error } = await supabase.from("quizzes").select("*").eq("id", id).maybeSingle();
+  if (error) throw error;
+  return data ? mapRowToQuiz(data) : undefined;
+}
+
+export async function getQuizByCode(code: string): Promise<Quiz | undefined> {
+  const { data, error } = await supabase.from("quizzes").select("*").eq("code", code).eq("is_active", true).maybeSingle();
+  if (error) throw error;
+  return data ? mapRowToQuiz(data) : undefined;
+}
+
+export async function createQuiz(title: string, questions: QuizQuestion[], settings: QuizSettings, roster?: StudentRosterEntry[]): Promise<Quiz> {
+  const row = {
     title,
     code: generateCode(),
-    questions,
-    settings,
-    createdAt: new Date().toISOString(),
-    isActive: true,
-    roster,
+    questions: questions as any,
+    settings: settings as any,
+    roster: roster ? (roster as any) : null,
+    is_active: true,
   };
-  const quizzes = getQuizzes();
-  quizzes.push(quiz);
-  saveQuizzes(quizzes);
-  return quiz;
+  const { data, error } = await supabase.from("quizzes").insert(row).select().single();
+  if (error) throw error;
+  return mapRowToQuiz(data);
 }
 
-export function updateQuiz(quiz: Quiz) {
-  const quizzes = getQuizzes();
-  const idx = quizzes.findIndex((q) => q.id === quiz.id);
-  if (idx !== -1) {
-    quizzes[idx] = quiz;
-    saveQuizzes(quizzes);
-  }
+export async function updateQuiz(quiz: Quiz): Promise<void> {
+  const { error } = await supabase.from("quizzes").update({
+    title: quiz.title,
+    questions: quiz.questions as any,
+    settings: quiz.settings as any,
+    roster: quiz.roster ? (quiz.roster as any) : null,
+    is_active: quiz.isActive,
+  }).eq("id", quiz.id);
+  if (error) throw error;
 }
 
-export function deleteQuiz(id: string) {
-  const quizzes = getQuizzes().filter((q) => q.id !== id);
-  saveQuizzes(quizzes);
-  const results = getResults().filter((r) => r.quizId !== id);
-  saveResults(results);
-  removeActiveStudentsForQuiz(id);
+export async function deleteQuiz(id: string): Promise<void> {
+  const { error } = await supabase.from("quizzes").delete().eq("id", id);
+  if (error) throw error;
 }
 
-export function getQuizByCode(code: string): Quiz | undefined {
-  return getQuizzes().find((q) => q.code === code && q.isActive);
+// Results
+export async function getResultsForQuiz(quizId: string): Promise<StudentResult[]> {
+  const { data, error } = await supabase.from("student_results").select("*").eq("quiz_id", quizId);
+  if (error) throw error;
+  return (data || []).map(mapRowToResult);
 }
 
-export function getQuizById(id: string): Quiz | undefined {
-  return getQuizzes().find((q) => q.id === id);
-}
-
-// Find quiz by student ID across all active quizzes with rosters
-export function findQuizByStudentId(studentId: string): { quiz: Quiz; entry: StudentRosterEntry } | undefined {
-  const quizzes = getQuizzes().filter(q => q.isActive && q.roster && q.roster.length > 0);
-  for (const quiz of quizzes) {
-    const entry = quiz.roster!.find(r => r.studentId === studentId);
-    if (entry) return { quiz, entry };
-  }
-  return undefined;
-}
-
-export function getResults(): StudentResult[] {
-  const data = localStorage.getItem(RESULTS_KEY);
-  return data ? JSON.parse(data) : [];
-}
-
-export function saveResults(results: StudentResult[]) {
-  localStorage.setItem(RESULTS_KEY, JSON.stringify(results));
-}
-
-export function submitResult(quizId: string, studentName: string, answers: Record<string, string>, timeTaken: number, studentId?: string): StudentResult {
-  const quiz = getQuizById(quizId);
+export async function submitResult(quizId: string, studentName: string, answers: Record<string, string>, timeTaken: number, studentId?: string): Promise<StudentResult> {
+  const quiz = await getQuizById(quizId);
   if (!quiz) throw new Error("Quiz not found");
 
   let score = 0;
@@ -144,65 +166,46 @@ export function submitResult(quizId: string, studentName: string, answers: Recor
     if (answers[q.id] === q.correctOptionId) score++;
   });
 
-  const result: StudentResult = {
-    id: generateId(),
-    quizId,
-    studentName,
-    studentId,
-    answers,
+  const row = {
+    quiz_id: quizId,
+    student_name: studentName,
+    student_id: studentId || null,
+    answers: answers as any,
     score,
-    totalQuestions: quiz.questions.length,
-    completedAt: new Date().toISOString(),
-    timeTaken,
+    total_questions: quiz.questions.length,
+    time_taken: timeTaken,
   };
+  const { data, error } = await supabase.from("student_results").insert(row).select().single();
+  if (error) throw error;
 
-  const results = getResults();
-  results.push(result);
-  saveResults(results);
-  
   // Remove from active students
-  removeActiveStudent(quizId, studentName);
-  
-  return result;
+  await removeActiveStudent(quizId, studentName);
+
+  return mapRowToResult(data);
 }
 
-export function getResultsForQuiz(quizId: string): StudentResult[] {
-  return getResults().filter((r) => r.quizId === quizId);
+// Active students
+export async function getActiveStudentsForQuiz(quizId: string): Promise<ActiveStudent[]> {
+  const { data, error } = await supabase.from("active_students").select("*").eq("quiz_id", quizId);
+  if (error) throw error;
+  return (data || []).map(mapRowToActive);
 }
 
-// Active students tracking
-export function getActiveStudents(): ActiveStudent[] {
-  const data = localStorage.getItem(ACTIVE_KEY);
-  return data ? JSON.parse(data) : [];
+export async function addActiveStudent(quizId: string, studentName: string, studentId?: string): Promise<void> {
+  const { error } = await supabase.from("active_students").insert({
+    quiz_id: quizId,
+    student_name: studentName,
+    student_id: studentId || null,
+  });
+  if (error && error.code !== "23505") throw error; // ignore duplicate
 }
 
-function saveActiveStudents(students: ActiveStudent[]) {
-  localStorage.setItem(ACTIVE_KEY, JSON.stringify(students));
+export async function removeActiveStudent(quizId: string, studentName: string): Promise<void> {
+  const { error } = await supabase.from("active_students").delete().eq("quiz_id", quizId).eq("student_name", studentName);
+  if (error) throw error;
 }
 
-export function addActiveStudent(quizId: string, studentName: string, studentId?: string) {
-  const students = getActiveStudents();
-  // Don't add duplicates
-  if (!students.find(s => s.quizId === quizId && s.studentName === studentName)) {
-    students.push({ quizId, studentName, studentId, startedAt: new Date().toISOString() });
-    saveActiveStudents(students);
-  }
-}
-
-export function removeActiveStudent(quizId: string, studentName: string) {
-  const students = getActiveStudents().filter(s => !(s.quizId === quizId && s.studentName === studentName));
-  saveActiveStudents(students);
-}
-
-export function getActiveStudentsForQuiz(quizId: string): ActiveStudent[] {
-  return getActiveStudents().filter(s => s.quizId === quizId);
-}
-
-function removeActiveStudentsForQuiz(quizId: string) {
-  const students = getActiveStudents().filter(s => s.quizId !== quizId);
-  saveActiveStudents(students);
-}
-
+// Utilities
 export function generateQuestionId(): string {
   return generateId();
 }
