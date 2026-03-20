@@ -201,8 +201,8 @@ export default function BankDetails() {
                 </div>
                 <div className="mr-11 grid sm:grid-cols-2 gap-2">
                   {q.options.map((opt:any) => (
-                    <div key={opt.id} className={`px-3 py-1.5 rounded-md text-sm border flex items-center gap-2 ${opt.id === q.correct_option_id ? "bg-success/10 border-success/30 text-success-foreground font-medium" : "bg-muted/30"}`}>
-                      <div className={`h-2 w-2 rounded-full ${opt.id === q.correct_option_id ? "bg-success" : "bg-muted-foreground/30"}`} />
+                    <div key={opt.id} className={`px-3 py-1.5 rounded-md text-sm border flex items-center gap-2 ${opt.id === q.correct_option_id ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400 font-medium" : "bg-muted/30"}`}>
+                      <div className={`h-2 w-2 rounded-full ${opt.id === q.correct_option_id ? "bg-emerald-500" : "bg-muted-foreground/30"}`} />
                       {opt.text}
                     </div>
                   ))}
@@ -238,6 +238,8 @@ export default function BankDetails() {
               {qOptions.map((opt, i) => (
                 <div key={opt.id} className="flex items-center gap-2">
                   <button 
+                    type="button"
+                    tabIndex={-1}
                     className={`h-8 w-8 shrink-0 rounded-md border flex items-center justify-center transition-colors ${qCorrectId === opt.id ? "bg-success border-success text-success-foreground" : "hover:bg-muted"}`}
                     onClick={() => setQCorrectId(opt.id)}
                   >

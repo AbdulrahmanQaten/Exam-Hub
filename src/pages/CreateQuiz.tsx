@@ -217,12 +217,12 @@ export default function CreateQuiz() {
                     </div>
                     <Input placeholder="نص السؤال" value={q.text} onChange={(e) => updateQuestion(qIndex, { text: e.target.value })} className="text-base font-medium rounded-lg" />
                   </div>
-                  <Button variant="ghost" size="icon" onClick={() => removeQuestion(qIndex)} className="text-destructive hover:text-destructive shrink-0"><Trash2 className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="icon" onClick={() => removeQuestion(qIndex)} tabIndex={-1} className="text-destructive hover:text-destructive shrink-0"><Trash2 className="h-4 w-4" /></Button>
                 </div>
                 <div className="mr-2 sm:mr-11 space-y-3">
                   {q.options.map((opt, oIndex) => (
                     <div key={opt.id} className="flex items-center gap-2">
-                      <button type="button" onClick={() => updateQuestion(qIndex, { correctOptionId: opt.id })} className={`shrink-0 h-8 w-8 rounded-lg flex items-center justify-center transition-colors ${q.correctOptionId === opt.id ? "bg-success text-success-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}>
+                      <button type="button" tabIndex={-1} onClick={() => updateQuestion(qIndex, { correctOptionId: opt.id })} className={`shrink-0 h-8 w-8 rounded-lg flex items-center justify-center transition-colors ${q.correctOptionId === opt.id ? "bg-success text-success-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}>
                         {q.correctOptionId === opt.id ? <CheckCircle2 className="h-4 w-4" /> : <span className="text-xs">{oIndex + 1}</span>}
                       </button>
                       {q.type === "mcq" ? (
@@ -231,7 +231,7 @@ export default function CreateQuiz() {
                         <div className="flex-1 rounded-lg border bg-muted/50 px-3 py-2 text-sm">{opt.text}</div>
                       )}
                       {q.type === "mcq" && q.options.length > 2 && (
-                        <Button variant="ghost" size="icon" onClick={() => removeOption(qIndex, oIndex)} className="h-8 w-8 shrink-0 text-muted-foreground"><XCircle className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" tabIndex={-1} onClick={() => removeOption(qIndex, oIndex)} className="h-8 w-8 shrink-0 text-muted-foreground"><XCircle className="h-4 w-4" /></Button>
                       )}
                     </div>
                   ))}

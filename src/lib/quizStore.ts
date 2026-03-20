@@ -103,9 +103,16 @@ function mapRowToActive(row: any): ActiveStudent {
 // ========= ASYNC API =========
 
 export async function getQuizzes(): Promise<Quiz[]> {
+  const { data: { user } } = await supabase.auth.getUser();
   const { data, error } = await supabase.from("quizzes").select("*").order("created_at", { ascending: false });
   if (error) throw error;
-  return (data || []).map(mapRowToQuiz);
+  
+  // تصفية أمنية قوية: عرض الاختبارات التي أنشأها هذا المعلم فقط!
+  const myQuizzes = (data || []).filter((row: any) => {
+    return row.settings && row.settings.teacher_id === user?.id;
+  });
+  
+  return myQuizzes.map(mapRowToQuiz);
 }
 
 export async function getQuizById(id: string): Promise<Quiz | undefined> {
@@ -121,11 +128,13 @@ export async function getQuizByCode(code: string): Promise<Quiz | undefined> {
 }
 
 export async function createQuiz(title: string, questions: QuizQuestion[], settings: QuizSettings, roster?: StudentRosterEntry[]): Promise<Quiz> {
+  const { data: { user } } = await supabase.auth.getUser();
+  
   const row = {
     title,
     code: generateCode(),
     questions: questions as any,
-    settings: settings as any,
+    settings: { ...(settings as any), teacher_id: user?.id },
     roster: roster ? (roster as any) : null,
     is_active: true,
   };
