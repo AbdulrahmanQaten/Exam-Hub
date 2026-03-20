@@ -23,10 +23,6 @@ export default function Index() {
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMSIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjEpIi8+PC9zdmc+')] opacity-30" />
         <div className="container relative z-10 text-center">
           <div className="mx-auto max-w-3xl">
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary-foreground/20 bg-primary-foreground/10 px-4 py-2 text-sm text-primary-foreground">
-              <GraduationCap className="h-4 w-4" />
-              منصة اختبارات تعمل بدون إنترنت
-            </div>
             <h1 className="mb-6 text-4xl font-extrabold leading-tight text-primary-foreground md:text-6xl">
               أنشئ اختباراتك
               <br />
@@ -92,7 +88,7 @@ export default function Index() {
       </section>
 
       {/* Benefits Section */}
-      <section className="bg-primary/5 py-16 border-y border-primary/10 mt-12">
+      <section className="bg-primary/5 py-16 border-y border-primary/10">
         <div className="container text-center">
           <h2 className="text-3xl font-bold mb-4">لماذا تُنشئ حساباً معنا؟</h2>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto mb-10">
