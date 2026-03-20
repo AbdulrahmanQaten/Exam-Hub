@@ -13,6 +13,9 @@ import TakeQuiz from "./pages/TakeQuiz";
 import QuizComplete from "./pages/QuizComplete";
 import QuizResults from "./pages/QuizResults";
 import NotFound from "./pages/NotFound";
+import Auth from "./pages/Auth";
+import BankDashboard from "./pages/BankDashboard";
+import BankDetails from "./pages/BankDetails";
 
 const queryClient = new QueryClient();
 
@@ -26,6 +29,9 @@ const App = () => (
           <AppHeader />
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/banks" element={<BankDashboard />} />
+            <Route path="/banks/:bankId" element={<BankDetails />} />
             <Route path="/teacher" element={<TeacherDashboard />} />
             <Route path="/teacher/create" element={<CreateQuiz />} />
             <Route path="/teacher/edit/:quizId" element={<CreateQuiz />} />

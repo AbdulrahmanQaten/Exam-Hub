@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#312E81;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#4F46E5;stop-opacity:1" />
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#818CF8;stop-opacity:0.6" />
+      <stop offset="100%" style="stop-color:#818CF8;stop-opacity:0" />
+    </radialGradient>
+  </defs>
+  
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <circle cx="600" cy="315" r="400" fill="url(#glow)"/>
+  
+  <rect x="520" y="160" width="160" height="160" rx="40" fill="#FFFFFF"/>
+  <path d="M560 250 L590 280 L650 210" fill="none" stroke="#4F46E5" stroke-width="25" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <text x="600" y="420" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="72" fill="#FFFFFF" text-anchor="middle">Exam Hub</text>
+  <text x="600" y="490" font-family="system-ui, -apple-system, sans-serif" font-weight="500" font-size="32" fill="#A5B4FC" text-anchor="middle">المنصة الأذكى لإنشاء وإدارة الاختبارات</text>
+</svg>

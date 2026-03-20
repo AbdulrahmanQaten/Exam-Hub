@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import {
-  Plus, Trash2, Save, ArrowRight, Clock, Shuffle, CheckCircle2, XCircle, Upload, FileSpreadsheet, Users,
+  Plus, Trash2, Save, ArrowRight, Clock, Shuffle, CheckCircle2, XCircle, Upload, FileSpreadsheet, Users, Library, Download,
 } from "lucide-react";
 import {
   createQuiz, updateQuiz, getQuizById, generateQuestionId, generateOptionId,
@@ -15,6 +15,8 @@ import {
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import { ExcelColumnSelector } from "@/components/ExcelColumnSelector";
+import { BankImportDialog } from "@/components/BankImportDialog";
+import { BankQuestion } from "@/lib/bankStore";
 
 export default function CreateQuiz() {
   const navigate = useNavigate();
@@ -36,6 +38,8 @@ export default function CreateQuiz() {
   const [columnSelectorOpen, setColumnSelectorOpen] = useState(false);
   const [excelColumns, setExcelColumns] = useState<string[]>([]);
   const [excelRows, setExcelRows] = useState<Record<string, any>[]>([]);
+  
+  const [bankImportOpen, setBankImportOpen] = useState(false);
 
   useEffect(() => {
     if (quizId) {
@@ -93,6 +97,20 @@ export default function CreateQuiz() {
     setQuestions(updated);
   };
 
+  const handleImportBankQuestions = (imported: BankQuestion[]) => {
+    const newQuestions: QuizQuestion[] = imported.map(q => ({
+      id: generateQuestionId(),
+      type: q.type,
+      text: q.text,
+      options: q.options.map((opt: any) => ({
+        id: opt.id,
+        text: opt.text
+      })),
+      correctOptionId: q.correct_option_id
+    }));
+    setQuestions([...questions, ...newQuestions]);
+  };
+
   const handleRosterUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -120,6 +138,24 @@ export default function CreateQuiz() {
 
   const handleColumnConfirm = (entries: StudentRosterEntry[]) => {
     setRoster(entries); toast.success(`تم استيراد ${entries.length} طالب بنجاح`);
+  };
+
+  const handleDownloadTemplate = () => {
+    // إنشاء ملف جديد
+    const wb = XLSX.utils.book_new();
+    // إنشاء بيانات القالب (عناوين + مثال)
+    const wsData = [
+      ["اسم الطالب", "رقم الجامعي / الهوية"],
+      ["عبد الله محمد", "1234567"]
+    ];
+    // تحويل المصفوفة إلى شيت العرض
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    // تنسيق عرض الأعمدة للتوضيح
+    ws['!cols'] = [{ wch: 30 }, { wch: 25 }];
+    // إدراج وحفظ الملف
+    XLSX.utils.book_append_sheet(wb, ws, "الطلاب");
+    XLSX.writeFile(wb, "قالب_طلاب_المنصة.xlsx");
+    toast.success("تم بدء تحميل القالب");
   };
 
   const handleSave = async () => {
@@ -156,6 +192,7 @@ export default function CreateQuiz() {
   return (
     <div className="min-h-[calc(100vh-4rem)]">
       <ExcelColumnSelector open={columnSelectorOpen} onClose={() => setColumnSelectorOpen(false)} columns={excelColumns} rows={excelRows} onConfirm={handleColumnConfirm} />
+      <BankImportDialog open={bankImportOpen} onClose={() => setBankImportOpen(false)} onImport={handleImportBankQuestions} />
 
       <div className="border-b bg-card">
         <div className="container py-6">
@@ -182,7 +219,7 @@ export default function CreateQuiz() {
                   </div>
                   <Button variant="ghost" size="icon" onClick={() => removeQuestion(qIndex)} className="text-destructive hover:text-destructive shrink-0"><Trash2 className="h-4 w-4" /></Button>
                 </div>
-                <div className="mr-11 space-y-2">
+                <div className="mr-2 sm:mr-11 space-y-3">
                   {q.options.map((opt, oIndex) => (
                     <div key={opt.id} className="flex items-center gap-2">
                       <button type="button" onClick={() => updateQuestion(qIndex, { correctOptionId: opt.id })} className={`shrink-0 h-8 w-8 rounded-lg flex items-center justify-center transition-colors ${q.correctOptionId === opt.id ? "bg-success text-success-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}>
@@ -204,9 +241,12 @@ export default function CreateQuiz() {
                 </div>
               </Card>
             ))}
-            <div className="flex gap-3">
-              <Button variant="outline" onClick={addMCQ} className="flex-1 gap-2 rounded-xl h-14 border-dashed border-2"><Plus className="h-5 w-5" /> اختيار من متعدد</Button>
-              <Button variant="outline" onClick={addTrueFalse} className="flex-1 gap-2 rounded-xl h-14 border-dashed border-2"><Plus className="h-5 w-5" /> صح أو خطأ</Button>
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+              <Button variant="outline" onClick={addMCQ} className="flex-1 gap-2 rounded-xl h-14 border-dashed border-2"><Plus className="h-5 w-5" /> <span className="hidden sm:inline">اختيار من متعدد</span><span className="sm:hidden">مُتعدد</span></Button>
+              <Button variant="outline" onClick={addTrueFalse} className="flex-1 gap-2 rounded-xl h-14 border-dashed border-2"><Plus className="h-5 w-5" /> <span className="hidden sm:inline">صح أو خطأ</span><span className="sm:hidden">صح/خطأ</span></Button>
+              <Button variant="outline" onClick={() => setBankImportOpen(true)} className="col-span-2 lg:col-span-1 flex-1 gap-2 rounded-xl h-14 border-dashed border-2 bg-primary/5 hover:bg-primary/10 border-primary/30 text-primary">
+                <Library className="h-5 w-5" /> استيراد
+              </Button>
             </div>
           </div>
 
@@ -238,7 +278,14 @@ export default function CreateQuiz() {
                 <h4 className="text-sm font-bold mb-3 flex items-center gap-2"><Users className="h-4 w-4" /> قائمة الطلاب (اختياري)</h4>
                 <p className="text-xs text-muted-foreground mb-3">ارفع ملف Excel يحتوي على أسماء وأرقام الطلاب</p>
                 <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleRosterUpload} className="hidden" />
-                <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="w-full gap-2 rounded-lg"><Upload className="h-4 w-4" /> رفع ملف Excel</Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="flex-1 gap-2 rounded-lg">
+                    <Upload className="h-4 w-4" /> رفع القائمة
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handleDownloadTemplate} className="flex-1 gap-2 rounded-lg" title="تحميل قالب أكسل فارغ جاهز للتعبئة">
+                    <Download className="h-4 w-4" /> تحميل قالب
+                  </Button>
+                </div>
                 {roster.length > 0 && (
                   <div className="mt-3 p-3 bg-muted rounded-lg">
                     <div className="flex items-center justify-between mb-2">

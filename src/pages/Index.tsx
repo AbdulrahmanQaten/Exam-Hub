@@ -2,12 +2,12 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { GraduationCap, Users, ClipboardList, ArrowLeft } from "lucide-react";
-import teacherHero from "@/assets/teacher-hero.jpg";
-import studentsHero from "@/assets/students-hero.jpg";
+import { GraduationCap, Users, ClipboardList, ArrowLeft, Library, UserPlus } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Index() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [quizCode, setQuizCode] = useState("");
 
   const handleJoinQuiz = () => {
@@ -44,6 +44,27 @@ export default function Index() {
                 <ClipboardList className="h-5 w-5" />
                 لوحة المعلم
               </Button>
+              {user ? (
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={() => navigate("/banks")}
+                  className="gap-2 rounded-xl bg-transparent border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground px-8 text-base font-bold shadow-lg backdrop-blur-sm"
+                >
+                  <Library className="h-5 w-5" />
+                  بنوك الأسئلة
+                </Button>
+              ) : (
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={() => navigate("/auth")}
+                  className="gap-2 rounded-xl bg-transparent border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground px-8 text-base font-bold shadow-lg backdrop-blur-sm"
+                >
+                  <UserPlus className="h-5 w-5" />
+                  سجل للحصول على الميزات
+                </Button>
+              )}
             </div>
 
             {/* Student Entry - Single quiz code input */}
@@ -60,7 +81,7 @@ export default function Index() {
                   size="lg"
                   onClick={handleJoinQuiz}
                   variant="outline"
-                  className="h-12 rounded-xl border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10"
+                  className="h-12 rounded-xl bg-transparent border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
                 >
                   <ArrowLeft className="h-5 w-5" />
                 </Button>
@@ -70,68 +91,80 @@ export default function Index() {
         </div>
       </section>
 
-      {/* Features */}
+      {/* Benefits Section */}
+      <section className="bg-primary/5 py-16 border-y border-primary/10 mt-12">
+        <div className="container text-center">
+          <h2 className="text-3xl font-bold mb-4">لماذا تُنشئ حساباً معنا؟</h2>
+          <p className="text-muted-foreground text-lg max-w-2xl mx-auto mb-10">
+            وفر وقتك واحتفظ بأسئلتك. عند إنشاء حساب (باسم مستخدم وكلمة مرور فقط، دون إيميل!)، ستحصل مجاناً على ميزات حصرية مصممة للمعلمين:
+          </p>
+          <div className="grid sm:grid-cols-2 gap-6 max-w-4xl mx-auto text-start">
+            <div className="bg-background p-6 rounded-2xl border shadow-sm hover:shadow-md transition-shadow">
+              <Library className="h-10 w-10 text-primary mb-4" />
+              <h3 className="font-bold text-xl mb-2">بنوك الأسئلة المخصصة</h3>
+              <p className="text-muted-foreground bg-muted/30 p-3 rounded-lg mt-2">أنشئ بنوك أسئلة وصنفها في وحدات، واحتفظ بأسئلتك للرجوع إليها مستقبلاً وتكوين الاختبارات منها بنقرة زر وبسحب عشوائي.</p>
+            </div>
+            <div className="bg-background p-6 rounded-2xl border shadow-sm hover:shadow-md transition-shadow">
+              <ClipboardList className="h-10 w-10 text-primary mb-4" />
+              <h3 className="font-bold text-xl mb-2">حفظ اختباراتك للأبد</h3>
+              <p className="text-muted-foreground bg-muted/30 p-3 rounded-lg mt-2">اربط جميع اختباراتك السابقة والقادمة بحسابك الخاص للوصول إليها من أي جهاز، وتعديلها أو مشاهدة نتائجها بأمان تام في مكان واحد.</p>
+            </div>
+          </div>
+          {!user && (
+            <div className="mt-10">
+              <Button size="lg" onClick={() => navigate("/auth")} className="gap-2 rounded-xl h-14 px-8 text-lg font-bold shadow-lg mx-auto">
+                <UserPlus className="h-6 w-6" />
+                إنشاء حساب مجاني أو تسجيل الدخول
+              </Button>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* How it works */}
       <section className="py-20">
         <div className="container">
           <h2 className="mb-12 text-center text-3xl font-bold">كيف يعمل؟</h2>
-          <div className="grid gap-8 md:grid-cols-3">
-            <FeatureCard
-              icon={<ClipboardList className="h-8 w-8" />}
-              title="أنشئ اختباراً"
-              description="أضف أسئلة اختيار من متعدد وصح وخطأ مع مؤقت وتوزيع عشوائي"
-              image={teacherHero}
-            />
-            <FeatureCard
-              icon={<Users className="h-8 w-8" />}
-              title="شارك الرمز"
-              description="شارك رمز الاختبار مع طلابك، يدخلون اسمهم ويبدؤون مباشرة"
-              image={studentsHero}
-            />
-            <FeatureCard
-              icon={<GraduationCap className="h-8 w-8" />}
-              title="تابع النتائج"
-              description="شاهد نتائج كل طالب وإحصائيات الاختبار في لوحة تحكم شاملة"
-              gradient
-            />
+          <div className="grid gap-6 md:grid-cols-3 max-w-5xl mx-auto">
+            <div className="bg-card p-8 rounded-2xl border text-center hover:border-primary/50 transition-colors shadow-sm">
+              <div className="h-16 w-16 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <ClipboardList className="h-8 w-8" />
+              </div>
+              <h3 className="font-bold text-xl mb-3">1. أنشئ اختبارك</h3>
+              <p className="text-muted-foreground">قم بإضافة أسئلة اختيار من متعدد أو صح وخطأ، أو استوردها بنقرة واحدة من بنك أسئلتك الخاص.</p>
+            </div>
+            <div className="bg-card p-8 rounded-2xl border text-center hover:border-primary/50 transition-colors shadow-sm">
+              <div className="h-16 w-16 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <Users className="h-8 w-8" />
+              </div>
+              <h3 className="font-bold text-xl mb-3">2. شارك الرمز</h3>
+              <p className="text-muted-foreground">احصل على رمز سري للاختبار وشاركه مع طلابك ليدخلوا فوراً دون الحاجة لتسجيل حساب.</p>
+            </div>
+            <div className="bg-card p-8 rounded-2xl border text-center hover:border-primary/50 transition-colors shadow-sm">
+              <div className="h-16 w-16 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <GraduationCap className="h-8 w-8" />
+              </div>
+              <h3 className="font-bold text-xl mb-3">3. تتبع النتائج</h3>
+              <p className="text-muted-foreground">شاهد درجات الطلاب وإجاباتهم بشكل لحظي من خلال لوحة تحكم بسيطة وشاملة.</p>
+            </div>
           </div>
         </div>
       </section>
-    </div>
-  );
-}
 
-function FeatureCard({
-  icon,
-  title,
-  description,
-  image,
-  gradient,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-  image?: string;
-  gradient?: boolean;
-}) {
-  return (
-    <div className="group glass-card rounded-2xl overflow-hidden transition-all hover:shadow-xl hover:-translate-y-1">
-      {image && (
-        <div className="h-48 overflow-hidden">
-          <img src={image} alt={title} className="h-full w-full object-cover transition-transform group-hover:scale-105" />
+      {/* About Us Section */}
+      <section className="bg-muted/30 py-20 border-t">
+        <div className="container max-w-4xl text-center">
+          <h2 className="mb-6 text-3xl font-bold">من نحن؟</h2>
+          <p className="text-lg text-muted-foreground leading-relaxed mb-8">
+            نحن دورية التميز <strong>Exam Hub</strong>، صُممنا المنصة بشغف لخدمة المعلمين والطلاب في بيئة تعليمية ذكية وخالية من التعقيد. هدفنا الأساسي هو توفير أداة قوية وسريعة لبناء الاختبارات وإدارتها دون الحاجة لخطوات تسجيل مطولة للطلاب أو إعدادات معقدة.
+          </p>
+          <div className="inline-flex flex-wrap items-center justify-center p-1 bg-background rounded-2xl border gap-2">
+            <span className="px-4 py-2 text-sm font-medium">تطوير مبني على احتياجاتكم</span>
+            <span className="px-4 py-2 text-sm font-medium border-r sm:border-y-0 border-y">سرعة وأداء فائقان</span>
+            <span className="px-4 py-2 text-sm font-medium border-r">بيئة عربية وخاصة</span>
+          </div>
         </div>
-      )}
-      {gradient && (
-        <div className="h-48 gradient-hero flex items-center justify-center">
-          <GraduationCap className="h-20 w-20 text-primary-foreground/30" />
-        </div>
-      )}
-      <div className="p-6">
-        <div className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-accent text-accent-foreground">
-          {icon}
-        </div>
-        <h3 className="mb-2 text-xl font-bold">{title}</h3>
-        <p className="text-muted-foreground">{description}</p>
-      </div>
+      </section>
     </div>
   );
 }

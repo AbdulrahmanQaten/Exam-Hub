@@ -109,8 +109,8 @@ export default function TeacherDashboard() {
   return (
     <div className="min-h-[calc(100vh-4rem)]">
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
+        <AlertDialogContent className="text-right" dir="rtl">
+          <AlertDialogHeader className="text-right sm:text-right">
             <AlertDialogTitle>هل أنت متأكد من حذف هذا الاختبار؟</AlertDialogTitle>
             <AlertDialogDescription>
               سيتم حذف الاختبار ونتائج جميع الطلاب المرتبطة به. لا يمكن التراجع عن هذا الإجراء.

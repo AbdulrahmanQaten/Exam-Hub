@@ -14,6 +14,7 @@ import {
   getQuizById, submitResult, shuffleArray, addActiveStudent,
   type Quiz, type QuizQuestion,
 } from "@/lib/quizStore";
+import { toast } from "sonner";
 
 export default function TakeQuiz() {
   const { code } = useParams();
@@ -116,6 +117,9 @@ export default function TakeQuiz() {
     if (!quiz?.settings.timerEnabled) return;
     timerRef.current = setInterval(() => {
       setTimeLeft((prev) => {
+        if (prev === 61) {
+          toast.warning("تنبيه: تبقى دقيقة واحدة فقط على انتهاء الاختبار!", { duration: 6000 });
+        }
         if (prev <= 1) { handleSubmit(false); return 0; }
         return prev - 1;
       });
@@ -157,8 +161,8 @@ export default function TakeQuiz() {
   return (
     <div className="min-h-[calc(100vh-4rem)]">
       <AlertDialog open={showSubmitWarning} onOpenChange={setShowSubmitWarning}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
+        <AlertDialogContent className="text-right" dir="rtl">
+          <AlertDialogHeader className="text-right sm:text-right">
             <AlertDialogTitle className="flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-warning" /> أسئلة غير مجابة</AlertDialogTitle>
             <AlertDialogDescription>
               لديك {unansweredCount} {unansweredCount === 1 ? "سؤال غير مجاب" : unansweredCount === 2 ? "سؤالان غير مجابين" : "أسئلة غير مجابة"}. هل تريد إنهاء الاختبار على أي حال؟
@@ -172,8 +176,8 @@ export default function TakeQuiz() {
       </AlertDialog>
 
       <AlertDialog open={showExitWarning} onOpenChange={setShowExitWarning}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
+        <AlertDialogContent className="text-right" dir="rtl">
+          <AlertDialogHeader className="text-right sm:text-right">
             <AlertDialogTitle className="flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-destructive" /> تحذير: لا تغادر الاختبار!</AlertDialogTitle>
             <AlertDialogDescription>إذا غادرت هذه الصفحة سيتم إلغاء اختبارك وتسجيل النتيجة صفر. هل تريد المغادرة؟</AlertDialogDescription>
           </AlertDialogHeader>
