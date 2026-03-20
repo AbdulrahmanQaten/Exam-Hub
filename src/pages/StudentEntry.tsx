@@ -14,57 +14,53 @@ export default function StudentEntry() {
   const [name, setName] = useState("");
   const [studentId, setStudentId] = useState("");
   const [notFound, setNotFound] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const hasRoster = quiz?.roster && quiz.roster.length > 0;
 
   useEffect(() => {
     if (code) {
-      const found = getQuizByCode(code.toUpperCase());
-      if (found) {
-        setQuiz(found);
-      } else {
-        setNotFound(true);
-      }
+      getQuizByCode(code.toUpperCase()).then((found) => {
+        if (found) {
+          setQuiz(found);
+        } else {
+          setNotFound(true);
+        }
+      }).catch(() => setNotFound(true)).finally(() => setLoading(false));
     }
   }, [code]);
 
-  const startQuiz = () => {
+  const startQuiz = async () => {
     setError("");
-    
+    if (!quiz) return;
+
     if (hasRoster) {
-      if (!studentId.trim()) {
-        setError("يرجى إدخال رقم الطالب");
-        return;
+      if (!studentId.trim()) { setError("يرجى إدخال رقم الطالب"); return; }
+      const entry = quiz.roster!.find(r => r.studentId === studentId.trim());
+      if (!entry) { setError("رقم الطالب غير مسجل في هذا الاختبار"); return; }
+      const results = await getResultsForQuiz(quiz.id);
+      if (results.find(r => r.studentId === studentId.trim())) {
+        setError("لقد أديت هذا الاختبار مسبقاً ولا يمكنك الدخول مرة أخرى"); return;
       }
-      const entry = quiz!.roster!.find(r => r.studentId === studentId.trim());
-      if (!entry) {
-        setError("رقم الطالب غير مسجل في هذا الاختبار");
-        return;
-      }
-      // Check if student already submitted
-      const results = getResultsForQuiz(quiz!.id);
-      const alreadySubmitted = results.find(r => r.studentId === studentId.trim());
-      if (alreadySubmitted) {
-        setError("لقد أديت هذا الاختبار مسبقاً ولا يمكنك الدخول مرة أخرى");
-        return;
-      }
-      navigate(`/quiz/${code}/start`, { state: { studentName: entry.name, quizId: quiz!.id, studentId: entry.studentId } });
+      navigate(`/quiz/${code}/start`, { state: { studentName: entry.name, quizId: quiz.id, studentId: entry.studentId } });
     } else {
-      if (!name.trim()) {
-        setError("يرجى إدخال اسمك");
-        return;
+      if (!name.trim()) { setError("يرجى إدخال اسمك"); return; }
+      const results = await getResultsForQuiz(quiz.id);
+      if (results.find(r => r.studentName === name.trim())) {
+        setError("يوجد طالب بهذا الاسم أدى الاختبار مسبقاً. إذا كنت شخصاً مختلفاً أضف لقبك"); return;
       }
-      // Check if student name already submitted
-      const results = getResultsForQuiz(quiz!.id);
-      const alreadySubmitted = results.find(r => r.studentName === name.trim());
-      if (alreadySubmitted) {
-        setError("يوجد طالب بهذا الاسم أدى الاختبار مسبقاً. إذا كنت شخصاً مختلفاً أضف لقبك");
-        return;
-      }
-      navigate(`/quiz/${code}/start`, { state: { studentName: name.trim(), quizId: quiz!.id } });
+      navigate(`/quiz/${code}/start`, { state: { studentName: name.trim(), quizId: quiz.id } });
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center">
+        <div className="animate-pulse-soft text-muted-foreground">جارٍ التحميل...</div>
+      </div>
+    );
+  }
 
   if (notFound) {
     return (
@@ -81,13 +77,7 @@ export default function StudentEntry() {
     );
   }
 
-  if (!quiz) {
-    return (
-      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center">
-        <div className="animate-pulse-soft text-muted-foreground">جارٍ التحميل...</div>
-      </div>
-    );
-  }
+  if (!quiz) return null;
 
   return (
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4">
@@ -102,14 +92,10 @@ export default function StudentEntry() {
 
         <div className="flex flex-wrap justify-center gap-2 mb-8">
           {quiz.settings.timerEnabled && (
-            <Badge variant="outline" className="gap-1.5 py-1.5 px-3">
-              <Clock className="h-3.5 w-3.5" /> {quiz.settings.timerMinutes} دقيقة
-            </Badge>
+            <Badge variant="outline" className="gap-1.5 py-1.5 px-3"><Clock className="h-3.5 w-3.5" /> {quiz.settings.timerMinutes} دقيقة</Badge>
           )}
           {quiz.settings.shuffleQuestions && (
-            <Badge variant="outline" className="gap-1.5 py-1.5 px-3">
-              <Shuffle className="h-3.5 w-3.5" /> ترتيب عشوائي
-            </Badge>
+            <Badge variant="outline" className="gap-1.5 py-1.5 px-3"><Shuffle className="h-3.5 w-3.5" /> ترتيب عشوائي</Badge>
           )}
         </div>
 
@@ -117,36 +103,16 @@ export default function StudentEntry() {
           {hasRoster ? (
             <div className="relative">
               <KeyRound className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-              <Input
-                placeholder="أدخل رقم الطالب"
-                value={studentId}
-                onChange={(e) => { setStudentId(e.target.value); setError(""); }}
-                onKeyDown={(e) => e.key === "Enter" && startQuiz()}
-                className="h-14 text-lg rounded-xl pr-10"
-              />
+              <Input placeholder="أدخل رقم الطالب" value={studentId} onChange={(e) => { setStudentId(e.target.value); setError(""); }} onKeyDown={(e) => e.key === "Enter" && startQuiz()} className="h-14 text-lg rounded-xl pr-10" />
             </div>
           ) : (
             <div className="relative">
               <UserCircle className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-              <Input
-                placeholder="أدخل اسمك الكامل"
-                value={name}
-                onChange={(e) => { setName(e.target.value); setError(""); }}
-                onKeyDown={(e) => e.key === "Enter" && startQuiz()}
-                className="h-14 text-lg rounded-xl pr-10"
-              />
+              <Input placeholder="أدخل اسمك الكامل" value={name} onChange={(e) => { setName(e.target.value); setError(""); }} onKeyDown={(e) => e.key === "Enter" && startQuiz()} className="h-14 text-lg rounded-xl pr-10" />
             </div>
           )}
-
-          {error && (
-            <p className="text-sm text-destructive">{error}</p>
-          )}
-
-          <Button
-            onClick={startQuiz}
-            className="w-full h-14 rounded-xl text-lg gap-2"
-            disabled={hasRoster ? !studentId.trim() : !name.trim()}
-          >
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          <Button onClick={startQuiz} className="w-full h-14 rounded-xl text-lg gap-2" disabled={hasRoster ? !studentId.trim() : !name.trim()}>
             ابدأ الاختبار
           </Button>
         </div>
