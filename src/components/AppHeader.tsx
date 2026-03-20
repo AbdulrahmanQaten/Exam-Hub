@@ -1,7 +1,7 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { ThemeToggle } from "./ThemeToggle";
 import { Button } from "@/components/ui/button";
-import { GraduationCap, LayoutDashboard, Home, LogIn, LogOut, Database } from "lucide-react";
+import { GraduationCap, LayoutDashboard, Home, LogIn, LogOut, Database, HelpCircle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -45,6 +45,12 @@ export function AppHeader() {
               الرئيسية
             </Button>
           )}
+
+          <Button variant="ghost" size="sm" onClick={() => navigate("/how-it-works")} className="gap-2 hidden sm:flex">
+            <HelpCircle className="h-4 w-4" />
+            كيف يعمل؟
+          </Button>
+
           {!isTeacher && (
             <Button variant="ghost" size="sm" onClick={() => navigate("/teacher")} className="gap-2">
               <LayoutDashboard className="h-4 w-4" />

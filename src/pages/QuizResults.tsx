@@ -8,8 +8,9 @@ import {
 } from "@/components/ui/table";
 import {
   ArrowRight, Users, BarChart3, Clock, Trophy, RefreshCw, Download,
-  TrendingDown, Target, CheckCircle2, XCircle, Loader2,
+  TrendingDown, Target, CheckCircle2, XCircle, Loader2, Eye
 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -22,9 +23,11 @@ export default function QuizResults() {
   const navigate = useNavigate();
   const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [results, setResults] = useState<StudentResult[]>([]);
+  const [selectedResult, setSelectedResult] = useState<StudentResult | null>(null);
   const [activeStudents, setActiveStudents] = useState<ActiveStudent[]>([]);
   const [loading, setLoading] = useState(true);
   const [clearTarget, setClearTarget] = useState<string | null>(null);
+  const [answerFilter, setAnswerFilter] = useState<'all' | 'correct' | 'wrong'>('all');
 
   const loadData = async () => {
     if (!quizId) return;
@@ -191,57 +194,39 @@ export default function QuizResults() {
 
         {results.length > 0 && questionStats.length > 0 && (
           <div className="grid gap-4 md:grid-cols-2 animate-fade-in shadow-sm">
-            {(() => {
-              const easiest = questionStats.reduce((prev, current) => (prev.successRate > current.successRate) ? prev : current);
-              const hardest = questionStats.reduce((prev, current) => (prev.successRate < current.successRate) ? prev : current);
-              const allSame = easiest.successRate === hardest.successRate;
-
-              if (allSame) {
+            <Card className="p-6 border-r-4 border-r-orange-500 bg-orange-500/5 border-l-0 border-y-0 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
+              <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-orange-600 dark:text-orange-400 relative z-10"><Target className="h-5 w-5" /> أصعب سؤال في الاختبار</h3>
+              {(() => {
+                const hardest = questionStats.reduce((prev, current) => (prev.successRate < current.successRate) ? prev : current);
                 return (
-                  <Card className="p-6 md:col-span-2 border-r-4 border-r-primary bg-primary/5 border-l-0 border-y-0 relative overflow-hidden flex items-center justify-between">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
-                    <div className="relative z-10">
-                      <h3 className="text-lg font-bold mb-2 text-primary flex items-center gap-2"><Trophy className="h-5 w-5" /> تحليل الأداء</h3>
-                      <p className="font-medium text-foreground">
-                        {easiest.successRate === 100 
-                          ? "إتقان كامل! جميع الطلاب أجابوا على كافة الأسئلة بشكل صحيح."
-                          : easiest.successRate === 0
-                          ? "لم يتمكن أي طالب من الإجابة بشكل صحيح على أي من الأسئلة."
-                          : `جميع الأسئلة متساوية في الصعوبة بنسبة نجاح ${easiest.successRate}%.`}
-                      </p>
+                  <div className="relative z-10">
+                    <p className="font-bold text-lg mb-3 leading-relaxed text-foreground">{hardest.text}</p>
+                    <div className="flex items-center gap-3">
+                      <Badge variant="destructive" className="font-mono text-sm px-3 py-1 bg-red-500 hover:bg-red-600 text-white border-transparent">{hardest.successRate}% نسبة نجاح</Badge>
+                      <span className="text-sm font-medium text-muted-foreground">{hardest.wrongCount} طلاب أخطأوا فيه</span>
                     </div>
-                  </Card>
+                  </div>
                 );
-              }
+              })()}
+            </Card>
 
-              return (
-                <>
-                  <Card className="p-6 border-r-4 border-r-orange-500 bg-orange-500/5 border-l-0 border-y-0 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
-                    <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-orange-600 dark:text-orange-400 relative z-10"><Target className="h-5 w-5" /> أصعب سؤال في الاختبار</h3>
-                    <div className="relative z-10">
-                      <p className="font-bold text-lg mb-3 leading-relaxed text-foreground">{hardest.text}</p>
-                      <div className="flex items-center gap-3">
-                        <Badge variant="destructive" className="font-mono text-sm px-3 py-1">{hardest.successRate}% نسبة نجاح</Badge>
-                        <span className="text-sm font-medium text-muted-foreground">{hardest.wrongCount} طلاب أخطأوا فيه</span>
-                      </div>
+            <Card className="p-6 border-r-4 border-r-emerald-500 bg-emerald-500/5 border-l-0 border-y-0 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
+              <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-emerald-600 dark:text-emerald-400 relative z-10"><Trophy className="h-5 w-5" /> أسهل سؤال في الاختبار</h3>
+              {(() => {
+                const easiest = questionStats.reduce((prev, current) => (prev.successRate > current.successRate) ? prev : current);
+                return (
+                  <div className="relative z-10">
+                    <p className="font-bold text-lg mb-3 leading-relaxed text-foreground">{easiest.text}</p>
+                    <div className="flex items-center gap-3">
+                      <Badge className="bg-emerald-500 text-white font-mono text-sm px-3 py-1 border-transparent hover:bg-emerald-600">{easiest.successRate}% نسبة نجاح</Badge>
+                      <span className="text-sm font-medium text-muted-foreground">{easiest.correctCount} طلاب أجابوا بشكل صحيح</span>
                     </div>
-                  </Card>
-
-                  <Card className="p-6 border-r-4 border-r-emerald-500 bg-emerald-500/5 border-l-0 border-y-0 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
-                    <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-emerald-600 dark:text-emerald-400 relative z-10"><Trophy className="h-5 w-5" /> أسهل سؤال في الاختبار</h3>
-                    <div className="relative z-10">
-                      <p className="font-bold text-lg mb-3 leading-relaxed text-foreground">{easiest.text}</p>
-                      <div className="flex items-center gap-3">
-                        <Badge className="bg-emerald-500 text-white font-mono text-sm px-3 py-1 hover:bg-emerald-600 border-transparent">{easiest.successRate}% نسبة نجاح</Badge>
-                        <span className="text-sm font-medium text-muted-foreground">{easiest.correctCount} طلاب أجابوا بشكل صحيح</span>
-                      </div>
-                    </div>
-                  </Card>
-                </>
-              );
-            })()}
+                  </div>
+                );
+              })()}
+            </Card>
           </div>
         )}
 
@@ -290,6 +275,7 @@ export default function QuizResults() {
                     <TableHead className="text-right">النسبة</TableHead>
                     <TableHead className="text-right">الوقت</TableHead>
                     <TableHead className="text-right">الحالة</TableHead>
+                    <TableHead className="text-center w-24">إجراء</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -308,6 +294,11 @@ export default function QuizResults() {
                         <TableCell className="font-bold">{pct}%</TableCell>
                         <TableCell className="font-mono text-sm">{formatTime(r.timeTaken)}</TableCell>
                         <TableCell><Badge variant={pct >= 50 ? "default" : "destructive"}>{pct >= 50 ? "ناجح" : "راسب"}</Badge></TableCell>
+                        <TableCell className="text-center">
+                          <Button variant="ghost" size="sm" onClick={() => setSelectedResult(r)} className="hover:bg-primary/10 hover:text-primary h-8 px-2 gap-1 rounded-lg">
+                            <Eye className="h-4 w-4" /> عرض
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     );
                   })}
@@ -317,6 +308,77 @@ export default function QuizResults() {
           )}
         </div>
       </div>
+
+      <Dialog open={!!selectedResult} onOpenChange={(o) => (!o && setSelectedResult(null))}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto text-right" dir="rtl">
+          <DialogHeader className="text-right sm:text-right">
+            <DialogTitle className="flex items-center gap-2 text-xl pb-2 border-b">
+              <Eye className="h-6 w-6 text-primary" /> إجابات الطالب: <span className="text-primary">{selectedResult?.studentName}</span>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-wrap gap-2 mb-4 border-b pb-4">
+            <Button variant={answerFilter === "all" ? "default" : "outline"} size="sm" onClick={() => setAnswerFilter("all")} className="rounded-xl">الكل</Button>
+            <Button variant={answerFilter === "correct" ? "default" : "outline"} size="sm" onClick={() => setAnswerFilter("correct")} className={`rounded-xl ${answerFilter === 'correct' ? 'bg-emerald-500 hover:bg-emerald-600 text-white opacity-100' : 'text-emerald-600 border-emerald-200 hover:bg-emerald-50'}`}>الإجابات الصحيحة</Button>
+            <Button variant={answerFilter === "wrong" ? "default" : "outline"} size="sm" onClick={() => setAnswerFilter("wrong")} className={`rounded-xl ${answerFilter === 'wrong' ? 'bg-red-500 hover:bg-red-600 text-white opacity-100' : 'text-red-600 border-red-200 hover:bg-red-50'}`}>الإجابات الخاطئة</Button>
+          </div>
+          <div className="space-y-4 pt-2">
+            {selectedResult && quiz.questions.map((q, index) => ({ q, index })).filter(({ q }) => {
+              if (answerFilter === 'all') return true;
+              const isCorrect = (selectedResult.answers || {})[q.id] === q.correctOptionId;
+              return answerFilter === 'correct' ? isCorrect : !isCorrect;
+            }).map(({ q, index }) => {
+              const studentAnswerId = (selectedResult.answers || {})[q.id];
+              const isCorrect = studentAnswerId === q.correctOptionId;
+              const studentOption = q.options?.find((o) => o.id === studentAnswerId);
+              const correctOption = q.options?.find((o) => o.id === q.correctOptionId);
+
+              return (
+                <Card key={q.id} className={`p-4 border-2 ${isCorrect ? "border-emerald-500/30 bg-emerald-500/5" : "border-red-500/30 bg-red-500/5"}`}>
+                  <div className="flex items-start gap-4">
+                    <div className={`h-8 w-8 shrink-0 flex items-center justify-center font-bold text-sm rounded-lg ${isCorrect ? "bg-emerald-500 text-white" : "bg-red-500 text-white"}`}>
+                      {index + 1}
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-bold mb-4 text-base leading-relaxed">{q.text}</p>
+                      
+                      {q.image_url && (
+                        <div className="mb-4 rounded-xl overflow-hidden border bg-muted/30">
+                          <img src={q.image_url} alt="Question" className="max-h-48 w-full object-contain" />
+                        </div>
+                      )}
+
+                      <div className="space-y-2">
+                        <div className={`p-3 rounded-lg border flex flex-col sm:flex-row sm:items-center justify-between gap-2 ${isCorrect ? "border-emerald-500 bg-emerald-500/10" : "border-red-500 bg-red-500/10"}`}>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium opacity-80 shrink-0">إجابة الطالب:</span>
+                            <span className="font-bold text-foreground">
+                              {studentOption ? studentOption.text : 
+                               (studentAnswerId === 'true' ? 'صح' : studentAnswerId === 'false' ? 'خطأ' : 'غير مجاب')}
+                            </span>
+                          </div>
+                          {isCorrect ? <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" /> : <XCircle className="h-5 w-5 text-red-600 shrink-0" />}
+                        </div>
+                        
+                        {!isCorrect && (
+                          <div className="p-3 rounded-lg border border-emerald-500 bg-emerald-500/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                             <div className="flex items-center gap-2">
+                               <span className="font-medium opacity-80 text-emerald-700 dark:text-emerald-400 shrink-0">الإجابة الصحيحة:</span>
+                               <span className="font-bold text-emerald-700 dark:text-emerald-400">
+                                 {correctOption?.text || (q.correctOptionId === 'true' ? 'صح' : 'خطأ')}
+                               </span>
+                             </div>
+                             <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

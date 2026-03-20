@@ -14,6 +14,8 @@ import QuizComplete from "./pages/QuizComplete";
 import QuizResults from "./pages/QuizResults";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
+import HowItWorks from "./pages/HowItWorks";
+import { AuthProvider } from "./hooks/useAuth";
 import BankDashboard from "./pages/BankDashboard";
 import BankDetails from "./pages/BankDetails";
 
@@ -26,21 +28,24 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <AppHeader />
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/banks" element={<BankDashboard />} />
-            <Route path="/banks/:bankId" element={<BankDetails />} />
-            <Route path="/teacher" element={<TeacherDashboard />} />
-            <Route path="/teacher/create" element={<CreateQuiz />} />
-            <Route path="/teacher/edit/:quizId" element={<CreateQuiz />} />
-            <Route path="/teacher/results/:quizId" element={<QuizResults />} />
-            <Route path="/quiz/:code" element={<StudentEntry />} />
-            <Route path="/quiz/:code/start" element={<TakeQuiz />} />
-            <Route path="/quiz/:code/complete" element={<QuizComplete />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <AuthProvider>
+            <AppHeader />
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/how-it-works" element={<HowItWorks />} />
+              <Route path="/banks" element={<BankDashboard />} />
+              <Route path="/banks/:bankId" element={<BankDetails />} />
+              <Route path="/teacher" element={<TeacherDashboard />} />
+              <Route path="/teacher/create" element={<CreateQuiz />} />
+              <Route path="/teacher/edit/:quizId" element={<CreateQuiz />} />
+              <Route path="/teacher/results/:quizId" element={<QuizResults />} />
+              <Route path="/quiz/:code" element={<StudentEntry />} />
+              <Route path="/quiz/:code/start" element={<TakeQuiz />} />
+              <Route path="/quiz/:code/complete" element={<QuizComplete />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>

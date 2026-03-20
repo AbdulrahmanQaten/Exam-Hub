@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { GraduationCap, Users, ClipboardList, ArrowLeft, Library, UserPlus, Image as ImageIcon } from "lucide-react";
+import { GraduationCap, Users, ClipboardList, ArrowLeft, Library, UserPlus, Image as ImageIcon, Target, BarChart3, HelpCircle, CheckCircle2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function Index() {
@@ -21,8 +21,25 @@ export default function Index() {
       {/* Hero */}
       <section className="relative overflow-hidden gradient-hero py-20 lg:py-32">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMSIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjEpIi8+PC9zdmc+')] opacity-30" />
+        
+        {/* Floating Icons Background */}
+        <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+          <GraduationCap className="absolute top-10 right-[10%] h-24 w-24 text-primary-foreground/10 -rotate-12 animate-[pulse_3s_ease-in-out_infinite]" />
+          <ClipboardList className="absolute bottom-20 right-[20%] h-32 w-32 text-primary-foreground/5 rotate-12" />
+          <Target className="absolute top-1/3 left-[15%] h-28 w-28 text-primary-foreground/10 -rotate-6 animate-[pulse_4s_ease-in-out_infinite]" />
+          <Users className="absolute bottom-10 left-[8%] h-20 w-20 text-primary-foreground/5 rotate-6" />
+          <BarChart3 className="absolute top-20 left-[40%] h-16 w-16 text-primary-foreground/10 -rotate-12" />
+        </div>
+
         <div className="container relative z-10 text-center">
           <div className="mx-auto max-w-3xl">
+            <div className="flex justify-center mb-8 animate-fade-in">
+              <span className="inline-flex items-center gap-2 rounded-full bg-primary-foreground/20 px-5 py-2 text-sm sm:text-base font-bold text-primary-foreground backdrop-blur-md border border-primary-foreground/30 shadow-lg">
+                <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+                بدون إيميل للمعلم • وبدون حساب للطالب!
+              </span>
+            </div>
+            
             <h1 className="mb-6 text-4xl font-extrabold leading-tight text-primary-foreground md:text-6xl">
               أنشئ اختباراتك
               <br />
@@ -148,6 +165,13 @@ export default function Index() {
               <h3 className="font-bold text-xl mb-3">3. تتبع النتائج</h3>
               <p className="text-muted-foreground">شاهد درجات الطلاب وإجاباتهم بشكل لحظي من خلال لوحة تحكم بسيطة وشاملة.</p>
             </div>
+          </div>
+          
+          <div className="mt-12 text-center animate-fade-in text-lg font-medium">
+            <Button variant="outline" size="lg" onClick={() => navigate("/how-it-works")} className="gap-2 rounded-xl h-14 px-8 border-primary/20 hover:bg-primary/5 shadow-sm text-primary">
+              <HelpCircle className="h-5 w-5" />
+              اقرأ الدليل الشامل والمفصل للمنصة
+            </Button>
           </div>
         </div>
       </section>
