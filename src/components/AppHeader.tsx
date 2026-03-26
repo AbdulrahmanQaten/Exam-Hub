@@ -5,11 +5,14 @@ import { GraduationCap, LayoutDashboard, Home, LogIn, LogOut, Database, HelpCirc
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { usePWAInstall } from "@/hooks/usePWAInstall";
+import { Share2, Smartphone } from "lucide-react";
 
 export function AppHeader() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, getUsername } = useAuth();
+  const { isInstallable, installPWA } = usePWAInstall();
   
   const isHome = location.pathname === "/";
   const isTeacher = location.pathname.startsWith("/teacher");
@@ -67,7 +70,7 @@ export function AppHeader() {
 
           <div className="mx-1 h-6 w-px bg-border hidden sm:block"></div>
 
-          {user ? (
+           {user ? (
             <div className="flex items-center gap-1">
               <span className="text-sm font-medium mr-2 hidden sm:inline-block">أهلاً {getUsername()}!</span>
               <Button variant="ghost" size="sm" onClick={handleLogout} className="text-destructive hover:text-destructive gap-2 h-9 px-2 sm:px-3">
@@ -79,6 +82,18 @@ export function AppHeader() {
             <Button variant="default" size="sm" onClick={() => navigate("/auth")} className="gap-2 h-9 px-3">
               <LogIn className="h-4 w-4" />
               دخول
+            </Button>
+          )}
+
+          {isInstallable && (
+            <Button 
+              variant="default" 
+              size="sm" 
+              onClick={installPWA} 
+              className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2 h-9 px-3 animate-pulse shadow-md"
+            >
+              <Smartphone className="h-4 w-4" />
+              تثبيت
             </Button>
           )}
           <ThemeToggle />
