@@ -78,13 +78,31 @@
 @layer base {
   * {
     @apply border-border;
+    -webkit-tap-highlight-color: transparent;
   }
   html {
     direction: rtl;
     font-family: 'Cairo', sans-serif;
+    -webkit-text-size-adjust: 100%;
+    touch-action: manipulation;
   }
   body {
     @apply bg-background text-foreground;
+    overflow-x: hidden;
+    /* Prevent elastic scroll on mobile if needed, but keeping it natural for now */
+    overscroll-behavior-y: none;
+    /* Respect safe areas (notches) */
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+  /* Prevent text selection on buttons and icons for a more native feel */
+  button, 
+  a, 
+  .lucide,
+  [role="button"] {
+    user-select: none;
   }
   /* Fix Switch direction in RTL */
   [data-radix-collection-item][role="switch"],

@@ -26,6 +26,7 @@ export default defineConfig(({ mode }) => ({
         theme_color: "#7C3AED",
         background_color: "#ffffff",
         display: "standalone",
+        orientation: "portrait",
         lang: "ar",
         dir: "rtl",
         icons: [
