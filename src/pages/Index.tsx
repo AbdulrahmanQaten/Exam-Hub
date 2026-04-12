@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { GraduationCap, Users, ClipboardList, ArrowLeft, Library, UserPlus, Image as ImageIcon, Target, BarChart3, HelpCircle, CheckCircle2 } from "lucide-react";
+import { GraduationCap, Users, ClipboardList, ArrowLeft, Library, UserPlus, Image as ImageIcon, Target, BarChart3, HelpCircle, CheckCircle2, FileSpreadsheet } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function Index() {
@@ -111,7 +111,7 @@ export default function Index() {
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto mb-10">
             وفر وقتك واحتفظ بأسئلتك. عند إنشاء حساب (باسم مستخدم وكلمة مرور فقط، دون إيميل!)، ستحصل مجاناً على ميزات حصرية مصممة للمعلمين:
           </p>
-          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto text-start">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto text-start">
             <div className="bg-background p-6 rounded-2xl border shadow-sm hover:shadow-md transition-shadow">
               <Library className="h-10 w-10 text-primary mb-4" />
               <h3 className="font-bold text-xl mb-2">بنوك الأسئلة المخصصة</h3>
@@ -126,6 +126,11 @@ export default function Index() {
               <ImageIcon className="h-10 w-10 text-primary mb-4" />
               <h3 className="font-bold text-xl mb-2">إرفاق وسائط وصور</h3>
               <p className="text-muted-foreground bg-muted/30 p-3 rounded-lg mt-2">عزز أسئلتك بصور توضيحية ومرفقات بصرية ترفع من جودة الاختبارات، وهي ميزة حصرية تقدم مجاناً للمسجلين في المنصة فقط.</p>
+            </div>
+            <div className="bg-background p-6 rounded-2xl border shadow-sm hover:shadow-md transition-shadow">
+              <FileSpreadsheet className="h-10 w-10 text-primary mb-4" />
+              <h3 className="font-bold text-xl mb-2">استيراد الأسئلة من Excel</h3>
+              <p className="text-muted-foreground bg-muted/30 p-3 rounded-lg mt-2">وفر وقتك وجهدك عبر رفع مئات الأسئلة دفعة واحدة من ملف Excel. نوفر لك قالباً جاهزاً ومنظماً لضمان سلاسة العملية.</p>
             </div>
           </div>
           {!user && (
