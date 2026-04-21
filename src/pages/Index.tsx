@@ -113,7 +113,7 @@ export default function Index() {
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto mb-10">
             وفر وقتك واحتفظ بأسئلتك. عند إنشاء حساب (باسم مستخدم وكلمة مرور فقط، دون إيميل!)، ستحصل مجاناً على ميزات حصرية مصممة للمعلمين:
           </p>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto text-start">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 max-w-[90rem] mx-auto text-start">
             <div className="bg-background p-6 rounded-2xl border shadow-sm hover:shadow-md transition-shadow">
               <Library className="h-10 w-10 text-primary mb-4" />
               <h3 className="font-bold text-xl mb-2">بنوك الأسئلة المخصصة</h3>
@@ -123,6 +123,11 @@ export default function Index() {
               <ClipboardList className="h-10 w-10 text-primary mb-4" />
               <h3 className="font-bold text-xl mb-2">حفظ اختباراتك للأبد</h3>
               <p className="text-muted-foreground bg-muted/30 p-3 rounded-lg mt-2">اربط جميع اختباراتك السابقة والقادمة بحسابك الخاص للوصول إليها من أي جهاز، وتعديلها أو مشاهدة نتائجها بأمان تام في مكان واحد.</p>
+            </div>
+            <div className="bg-background p-6 rounded-2xl border shadow-sm hover:shadow-md transition-shadow">
+              <Users className="h-10 w-10 text-primary mb-4" />
+              <h3 className="font-bold text-xl mb-2">إدارة الفصول والطلاب</h3>
+              <p className="text-muted-foreground bg-muted/30 p-3 rounded-lg mt-2">نظم طلابك في فصول دراسية دائمة، وقم باستيراد قوائمهم بضغطة زر عند إنشاء أي اختبار جديد دون الحاجة لتكرار العمل.</p>
             </div>
             <div className="bg-background p-6 rounded-2xl border shadow-sm hover:shadow-md transition-shadow">
               <ImageIcon className="h-10 w-10 text-primary mb-4" />
