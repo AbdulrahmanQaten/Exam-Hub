@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import {
-  Plus, Trash2, Save, ArrowRight, Clock, Shuffle, CheckCircle2, XCircle, Upload, FileSpreadsheet, Users, Library, Download, Image as ImageIcon, Loader2, X, GripVertical,
+  Plus, Trash2, Save, ArrowRight, Clock, Shuffle, CheckCircle2, XCircle, Upload, FileSpreadsheet, Users, Library, Download, Image as ImageIcon, Loader2, X, GripVertical, Search
 } from "lucide-react";
 import {
   createQuiz, updateQuiz, getQuizById, generateQuestionId, generateOptionId, uploadQuestionImage,
@@ -18,6 +18,9 @@ import { ExcelColumnSelector } from "@/components/ExcelColumnSelector";
 import { BankImportDialog } from "@/components/BankImportDialog";
 import { BankQuestion } from "@/lib/bankStore";
 import { useAuth } from "@/hooks/useAuth";
+import { usePageTitle } from "@/hooks/usePageTitle";
+import { supabase } from "@/integrations/supabase/client";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 import {
   DndContext,
@@ -33,8 +36,8 @@ import {
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
-  useSortable,
 } from '@dnd-kit/sortable';
+import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
 interface QuestionCardProps {
@@ -148,6 +151,7 @@ export default function CreateQuiz() {
   const { user } = useAuth();
   const { quizId } = useParams<{ quizId: string }>();
   const isEditing = !!quizId;
+  usePageTitle(isEditing ? "تعديل الاختبار" : "إنشاء اختبار جديد");
 
   const [title, setTitle] = useState("");
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
@@ -168,6 +172,7 @@ export default function CreateQuiz() {
   const [excelRows, setExcelRows] = useState<Record<string, any>[]>([]);
   
   const [bankImportOpen, setBankImportOpen] = useState(false);
+  const [classImportOpen, setClassImportOpen] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState<Record<number, boolean>>({});
 
   const sensors = useSensors(
@@ -458,6 +463,7 @@ export default function CreateQuiz() {
     <div className="min-h-[calc(100vh-4rem)]">
       <ExcelColumnSelector open={columnSelectorOpen} onClose={() => setColumnSelectorOpen(false)} columns={excelColumns} rows={excelRows} onConfirm={handleColumnConfirm} />
       <BankImportDialog open={bankImportOpen} onClose={() => setBankImportOpen(false)} onImport={handleImportBankQuestions} />
+      <ClassImportDialog open={classImportOpen} onClose={() => setClassImportOpen(false)} onImport={(students) => { setRoster(students); toast.success(`تم استيراد ${students.length} طالب من الفصل`); }} />
 
       <div className="border-b bg-card">
         <div className="container py-6 px-4">
@@ -518,7 +524,7 @@ export default function CreateQuiz() {
                 <Button 
                   variant="outline" 
                   onClick={() => questionsFileInputRef.current?.click()} 
-                  className="w-full gap-2 rounded-xl h-14 border-dashed border-2 bg-success/5 hover:bg-success/10 border-success/30 text-success font-bold flex flex-col sm:flex-row items-center justify-center p-2 text-center"
+                  className="w-full gap-2 rounded-xl h-14 border-dashed border-2 bg-success/5 hover:bg-primary/10 border-success/30 text-success font-bold flex flex-col sm:flex-row items-center justify-center p-2 text-center"
                 >
                   <FileSpreadsheet className="h-5 w-5 shrink-0" /> 
                   <span className="text-[10px] sm:text-sm">استيراد من Excel</span>
@@ -572,16 +578,20 @@ export default function CreateQuiz() {
 
               <div className="mt-6 pt-4 border-t">
                 <h4 className="text-sm font-bold mb-3 flex items-center gap-2"><Users className="h-4 w-4" /> قائمة الطلاب (اختياري)</h4>
-                <p className="text-xs text-muted-foreground mb-3">ارفع ملف Excel يحتوي على أسماء وأرقام الطلاب</p>
+                <p className="text-xs text-muted-foreground mb-3">ارفع ملف Excel أو اختر من فصولك الجاهزة</p>
                 <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleRosterUpload} className="hidden" />
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="flex-1 gap-2 rounded-lg">
-                    <Upload className="h-4 w-4" /> رفع القائمة
+                    <Upload className="h-4 w-4" /> رفع Excel
                   </Button>
-                  <Button variant="outline" size="sm" onClick={handleDownloadTemplate} className="flex-1 gap-2 rounded-lg" title="تحميل قالب أكسل فارغ جاهز للتعبئة">
-                    <Download className="h-4 w-4" /> تحميل قالب
+                  <Button variant="outline" size="sm" onClick={() => setClassImportOpen(true)} className="flex-1 gap-2 rounded-lg bg-primary/5 text-primary border-primary/20">
+                    <Users className="h-4 w-4" /> من فصولي
                   </Button>
                 </div>
+                <Button variant="ghost" size="sm" onClick={handleDownloadTemplate} className="w-full mt-2 h-8 text-[10px] text-muted-foreground gap-1.5" title="تحميل قالب أكسل فارغ جاهز للتعبئة">
+                  <Download className="h-3.5 w-3.5" /> تحميل قالب Excel
+                </Button>
+                
                 {roster.length > 0 && (
                   <div className="mt-3 p-3 bg-muted rounded-lg">
                     <div className="flex items-center justify-between mb-2">
@@ -609,5 +619,50 @@ export default function CreateQuiz() {
         </div>
       </div>
     </div>
+  );
+}
+
+function ClassImportDialog({ open, onClose, onImport }: { open: boolean, onClose: () => void, onImport: (students: StudentRosterEntry[]) => void }) {
+  const { user } = useAuth();
+  const [classes, setClasses] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    if (open && user) {
+      setLoading(true);
+      supabase.from("classes").select("*").eq("teacher_id", user.id).order("created_at", { ascending: false })
+        .then(({ data }) => { setClasses(data || []); setLoading(false); });
+    }
+  }, [open, user]);
+
+  const filtered = classes.filter(c => c.name.toLowerCase().includes(search.toLowerCase()) && c.students?.length > 0);
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md text-right" dir="rtl">
+        <DialogHeader className="text-right sm:text-right">
+          <DialogTitle>استيراد قائمة طلاب من فصولي</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div className="relative">
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="بحث عن فصل..." className="pr-10" value={search} onChange={e => setSearch(e.target.value)} />
+          </div>
+          
+          <div className="max-h-60 overflow-y-auto space-y-2">
+            {loading ? <div className="text-center py-4"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></div> :
+             filtered.length === 0 ? <p className="text-center py-4 text-muted-foreground text-sm">لا توجد فصول تحتوي على طلاب</p> :
+             filtered.map(c => (
+               <button key={c.id} onClick={() => { onImport(c.students); onClose(); }} className="w-full flex items-center justify-between p-3 rounded-lg border hover:border-primary hover:bg-primary/5 transition-all text-right">
+                 <div className="font-bold">{c.name}</div>
+                 <div className="text-xs bg-muted px-2 py-1 rounded-md">{c.students.length} طالب</div>
+               </button>
+             ))
+            }
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

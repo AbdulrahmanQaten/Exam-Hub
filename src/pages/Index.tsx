@@ -4,10 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { GraduationCap, Users, ClipboardList, ArrowLeft, Library, UserPlus, Image as ImageIcon, Target, BarChart3, HelpCircle, CheckCircle2, FileSpreadsheet } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 export default function Index() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  usePageTitle("الرئيسية - منصة الاختبارات الذكية");
   const [quizCode, setQuizCode] = useState("");
 
   const handleJoinQuiz = () => {

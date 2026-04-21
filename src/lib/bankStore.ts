@@ -7,6 +7,7 @@ export interface QuestionBank {
   user_id: string;
   title: string;
   description: string;
+  is_public: boolean;
   created_at: string;
 }
 
@@ -48,9 +49,24 @@ export async function createBank(userId: string, title: string, description: str
   return data;
 }
 
+export async function updateBank(id: string, updates: Partial<Omit<QuestionBank, "id" | "user_id" | "created_at">>): Promise<void> {
+  const { error } = await db.from("question_banks").update(updates).eq("id", id);
+  if (error) throw error;
+}
+
 export async function deleteBank(id: string): Promise<void> {
   const { error } = await db.from("question_banks").delete().eq("id", id);
   if (error) throw error;
+}
+
+export async function getPublicBanks(): Promise<QuestionBank[]> {
+  const { data, error } = await db
+    .from("question_banks")
+    .select("*")
+    .eq("is_public", true)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data || [];
 }
 
 export async function getBankUnits(bankId: string): Promise<BankUnit[]> {

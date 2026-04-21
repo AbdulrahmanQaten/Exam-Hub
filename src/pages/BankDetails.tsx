@@ -1,27 +1,34 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { 
   BankUnit, BankQuestion, getBankUnits, createBankUnit, deleteBankUnit,
-  getBankQuestions, createBankQuestion, deleteBankQuestion, QuestionBank, getBanks
+  getBankQuestions, createBankQuestion, deleteBankQuestion, QuestionBank, getBanks, updateBank
 } from "@/lib/bankStore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Trash2, Plus, ArrowRight, Folder, FileQuestion, BookOpen } from "lucide-react";
+import { Trash2, Plus, ArrowRight, Folder, FileQuestion, BookOpen, FileSpreadsheet, Download, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import * as XLSX from "xlsx";
+import { usePageTitle } from "@/hooks/usePageTitle";
+import { ExcelColumnSelector } from "@/components/ExcelColumnSelector";
 
 export default function BankDetails() {
   const { bankId } = useParams<{ bankId: string }>();
+  usePageTitle("تفاصيل بنك الأسئلة");
   const navigate = useNavigate();
   const { user, isLoading } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [bank, setBank] = useState<QuestionBank | null>(null);
   const [units, setUnits] = useState<BankUnit[]>([]);
   const [questions, setQuestions] = useState<BankQuestion[]>([]);
   const [selectedUnit, setSelectedUnit] = useState<string | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
   
   const [isAddUnitOpen, setIsAddUnitOpen] = useState(false);
   const [newUnitName, setNewUnitName] = useState("");
@@ -32,6 +39,10 @@ export default function BankDetails() {
   const [qOptions, setQOptions] = useState<any[]>([]);
   const [qCorrectId, setQCorrectId] = useState("");
 
+  const [columnSelectorOpen, setColumnSelectorOpen] = useState(false);
+  const [excelColumns, setExcelColumns] = useState<string[]>([]);
+  const [excelRows, setExcelRows] = useState<Record<string, any>[]>([]);
+
   useEffect(() => {
     if (!isLoading && !user) navigate("/auth");
     else if (user && bankId) loadData();
@@ -39,10 +50,9 @@ export default function BankDetails() {
 
   const loadData = async () => {
     try {
-      const allBanks = await getBanks(user!.id);
-      const b = allBanks.find(x => x.id === bankId);
-      if (!b) { navigate("/banks"); return; }
-      setBank(b);
+      const { data: bData, error: bError } = await supabase.from("question_banks").select("*").eq("id", bankId).single();
+      if (bError || !bData) { navigate("/banks"); return; }
+      setBank(bData as any);
       
       const [uData, qData] = await Promise.all([
         getBankUnits(bankId!),
@@ -120,6 +130,103 @@ export default function BankDetails() {
     }
   };
 
+  const handleDownloadTemplate = () => {
+    const wb = XLSX.utils.book_new();
+    const wsData = [
+      ["نوع السؤال", "نص السؤال", "الوحدة/الفصل", "الخيار 1", "الخيار 2", "الخيار 3", "الخيار 4", "رقم الإجابة الصحيحة"],
+      ["mcq", "ما هي عاصمة السعودية؟", "الجغرافيا", "الرياض", "جدة", "الدمام", "مكة", "1"],
+      ["truefalse", "الأرض كروية الشكل؟", "العلوم", "صح", "خطأ", "", "", "1"],
+      ["mcq", "2 + 2 = ?", "الرياضيات", "3", "4", "5", "6", "2"]
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    ws['!cols'] = [{ wch: 15 }, { wch: 40 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 20 }];
+    XLSX.utils.book_append_sheet(wb, ws, "الأسئلة");
+    XLSX.writeFile(wb, `قالب_بنك_${bank?.title}.xlsx`);
+    toast.success("تم تحميل القالب");
+  };
+
+  const handleExcelUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsImporting(true);
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const data = new Uint8Array(evt.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: "array" });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet);
+        
+        if (rows.length === 0) { toast.error("الملف فارغ"); return; }
+        const keys = Object.keys(rows[0]);
+        if (keys.length > 2) {
+           setExcelColumns(keys); setExcelRows(rows); setColumnSelectorOpen(true);
+        } else {
+           processImportedQuestions(rows);
+        }
+      } catch (err) {
+        toast.error("حدث خطأ أثناء الاستيراد");
+      } finally {
+        setIsImporting(false);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  const processImportedQuestions = async (rows: any[]) => {
+      let currentUnits = [...units];
+      let importedCount = 0;
+
+      for (const row of rows) {
+        const type = String(row["نوع السؤال"] || "mcq").toLowerCase().includes("صح") ? "truefalse" : "mcq";
+        const text = String(row["نص السؤال"] || "").trim();
+        const unitName = String(row["الوحدة/الفصل"] || "").trim();
+        
+        if (!text) continue;
+
+        let unitId = selectedUnit;
+        if (unitName) {
+          let unit = currentUnits.find(u => u.name === unitName);
+          if (!unit) {
+            unit = await createBankUnit(bankId!, unitName);
+            currentUnits.push(unit);
+            setUnits([...currentUnits]);
+          }
+          unitId = unit.id;
+        }
+
+        const genId = () => Math.random().toString(36).substring(2, 8);
+        let options: any[] = [];
+        let correctId = "";
+
+        if (type === "mcq") {
+          const optTexts = [
+            String(row["الخيار 1"] || "").trim(),
+            String(row["الخيار 2"] || "").trim(),
+            String(row["الخيار 3"] || "").trim(),
+            String(row["الخيار 4"] || "").trim(),
+          ].filter(t => t);
+          options = optTexts.map(t => ({ id: genId(), text: t }));
+          const correctNum = parseInt(row["رقم الإجابة الصحيحة"]) || 1;
+          if (options[correctNum - 1]) correctId = options[correctNum - 1].id;
+          else if (options.length > 0) correctId = options[0].id;
+        } else {
+          const trueId = genId(); const falseId = genId();
+          options = [{ id: trueId, text: "صح" }, { id: falseId, text: "خطأ" }];
+          const correctVal = String(row["رقم الإجابة الصحيحة"] || "1");
+          correctId = (correctVal === "1" || correctVal.includes("صح")) ? trueId : falseId;
+        }
+
+        if (correctId) {
+          await createBankQuestion(bankId!, unitId, type, text, options, correctId);
+          importedCount++;
+        }
+      }
+      toast.success(`تم استيراد ${importedCount} سؤال بنجاح`);
+      loadData();
+  };
+
   const displayedQuestions = selectedUnit 
     ? questions.filter(q => q.unit_id === selectedUnit)
     : questions;
@@ -127,7 +234,9 @@ export default function BankDetails() {
   if (!bank) return <div className="p-8 text-center text-muted-foreground">جاري التحميل...</div>;
 
   return (
-    <div className="container py-6">
+    <div className="container py-6" dir="rtl">
+      <ExcelColumnSelector open={columnSelectorOpen} onClose={() => setColumnSelectorOpen(false)} columns={excelColumns} rows={excelRows} onConfirm={processImportedQuestions} />
+      
       <div className="flex items-center gap-3 mb-6">
         <Button variant="ghost" size="icon" onClick={() => navigate("/banks")} className="rounded-full">
           <ArrowRight className="h-5 w-5" />
@@ -168,12 +277,21 @@ export default function BankDetails() {
 
         {/* Questions Area */}
         <div className="space-y-4">
-          <div className="flex gap-2 mb-4 bg-muted/30 p-2 rounded-xl border border-dashed justify-center sm:justify-start">
-            <Button variant="outline" className="gap-2 shrink-0 bg-background" onClick={() => openAddQuestion("mcq")}>
-              <Plus className="h-4 w-4" /> اختيار من متعدد
+          <div className="flex flex-wrap gap-2 mb-4 bg-muted/30 p-2 rounded-xl border border-dashed justify-center sm:justify-start">
+            <Button variant="outline" size="sm" className="gap-2 bg-background" onClick={() => openAddQuestion("mcq")}>
+              <Plus className="h-4 w-4" /> إضافة MCQ
             </Button>
-            <Button variant="outline" className="gap-2 shrink-0 bg-background" onClick={() => openAddQuestion("truefalse")}>
-              <Plus className="h-4 w-4" /> صح أو خطأ
+            <Button variant="outline" size="sm" className="gap-2 bg-background" onClick={() => openAddQuestion("truefalse")}>
+              <Plus className="h-4 w-4" /> إضافة صح/خطأ
+            </Button>
+            <div className="h-8 w-px bg-border mx-1 hidden sm:block" />
+            <input ref={fileInputRef} type="file" accept=".xlsx,.xls" onChange={handleExcelUpload} className="hidden" />
+            <Button variant="outline" size="sm" className="gap-2 bg-emerald-500/5 text-emerald-600 border-emerald-500/20 hover:bg-emerald-500/10" onClick={() => fileInputRef.current?.click()} disabled={isImporting}>
+              {isImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSpreadsheet className="h-4 w-4" />}
+              استيراد Excel
+            </Button>
+            <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground" onClick={handleDownloadTemplate}>
+              <Download className="h-4 w-4" /> تحميل قالب
             </Button>
           </div>
 
@@ -238,7 +356,7 @@ export default function BankDetails() {
               {qOptions.map((opt, i) => (
                 <div key={opt.id} className="flex items-center gap-2">
                   <button 
-                    type="button"
+                    type="button" 
                     tabIndex={-1}
                     className={`h-8 w-8 shrink-0 rounded-md border flex items-center justify-center transition-colors ${qCorrectId === opt.id ? "bg-success border-success text-success-foreground" : "hover:bg-muted"}`}
                     onClick={() => setQCorrectId(opt.id)}

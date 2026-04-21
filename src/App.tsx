@@ -18,6 +18,9 @@ import HowItWorks from "./pages/HowItWorks";
 import { AuthProvider } from "./hooks/useAuth";
 import BankDashboard from "./pages/BankDashboard";
 import BankDetails from "./pages/BankDetails";
+import ClassManagement from "./pages/ClassManagement";
+import ClassDetails from "./pages/ClassDetails";
+import { ProtectedRoute } from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -34,12 +37,18 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/how-it-works" element={<HowItWorks />} />
-              <Route path="/banks" element={<BankDashboard />} />
-              <Route path="/banks/:bankId" element={<BankDetails />} />
-              <Route path="/teacher" element={<TeacherDashboard />} />
-              <Route path="/teacher/create" element={<CreateQuiz />} />
-              <Route path="/teacher/edit/:quizId" element={<CreateQuiz />} />
-              <Route path="/teacher/results/:quizId" element={<QuizResults />} />
+              
+              {/* Protected Teacher/Bank Routes */}
+              <Route path="/banks" element={<ProtectedRoute><BankDashboard /></ProtectedRoute>} />
+              <Route path="/banks/:bankId" element={<ProtectedRoute><BankDetails /></ProtectedRoute>} />
+              <Route path="/classes" element={<ProtectedRoute><ClassManagement /></ProtectedRoute>} />
+              <Route path="/classes/:classId" element={<ProtectedRoute><ClassDetails /></ProtectedRoute>} />
+              <Route path="/teacher" element={<ProtectedRoute><TeacherDashboard /></ProtectedRoute>} />
+              <Route path="/teacher/create" element={<ProtectedRoute><CreateQuiz /></ProtectedRoute>} />
+              <Route path="/teacher/edit/:quizId" element={<ProtectedRoute><CreateQuiz /></ProtectedRoute>} />
+              <Route path="/teacher/results/:quizId" element={<ProtectedRoute><QuizResults /></ProtectedRoute>} />
+              
+              {/* Public Student Routes */}
               <Route path="/quiz/:code" element={<StudentEntry />} />
               <Route path="/quiz/:code/start" element={<TakeQuiz />} />
               <Route path="/quiz/:code/complete" element={<QuizComplete />} />

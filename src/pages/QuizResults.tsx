@@ -17,9 +17,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import { getQuizById, getResultsForQuiz, getActiveStudentsForQuiz, removeActiveStudent, type Quiz, type StudentResult, type ActiveStudent } from "@/lib/quizStore";
 import * as XLSX from "xlsx";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell } from 'recharts';
+import { toast } from "sonner";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 export default function QuizResults() {
   const { quizId } = useParams<{ quizId: string }>();
+  usePageTitle("نتائج الاختبار وتحليل الأداء");
   const navigate = useNavigate();
   const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [results, setResults] = useState<StudentResult[]>([]);
@@ -123,8 +127,25 @@ export default function QuizResults() {
     return { index: i + 1, text: q.text, type: q.type, correctCount, wrongCount: results.length - correctCount, successRate: results.length ? Math.round((correctCount / results.length) * 100) : 0 };
   });
 
+  const scoreDistribution = [
+    { range: '0-20%', count: 0, color: '#ef4444' },
+    { range: '21-40%', count: 0, color: '#f97316' },
+    { range: '41-60%', count: 0, color: '#eab308' },
+    { range: '61-80%', count: 0, color: '#84cc16' },
+    { range: '81-100%', count: 0, color: '#10b981' },
+  ];
+
+  results.forEach(r => {
+    const pct = (r.score / r.totalQuestions) * 100;
+    if (pct <= 20) scoreDistribution[0].count++;
+    else if (pct <= 40) scoreDistribution[1].count++;
+    else if (pct <= 60) scoreDistribution[2].count++;
+    else if (pct <= 80) scoreDistribution[3].count++;
+    else scoreDistribution[4].count++;
+  });
+
   return (
-    <div className="min-h-[calc(100vh-4rem)]">
+    <div className="min-h-[calc(100vh-4rem)]" dir="rtl">
       <AlertDialog open={!!clearTarget} onOpenChange={(open) => !open && setClearTarget(null)}>
         <AlertDialogContent className="text-right" dir="rtl">
           <AlertDialogHeader className="text-right sm:text-right">
@@ -194,65 +215,110 @@ export default function QuizResults() {
         )}
 
         {results.length > 0 && questionStats.length > 0 && (
-          <div className="grid gap-4 md:grid-cols-2 animate-fade-in shadow-sm">
-            <Card className="p-6 border-r-4 border-r-orange-500 bg-orange-500/5 border-l-0 border-y-0 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
-              <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-orange-600 dark:text-orange-400 relative z-10"><Target className="h-5 w-5" /> أصعب سؤال في الاختبار</h3>
-              {(() => {
-                const hardest = questionStats.reduce((prev, current) => (prev.successRate < current.successRate) ? prev : current);
-                return (
-                  <div className="relative z-10">
-                    <p className="font-bold text-lg mb-3 leading-relaxed text-foreground">{hardest.text}</p>
-                    <div className="flex items-center gap-3">
-                      <Badge variant="destructive" className="font-mono text-sm px-3 py-1 bg-red-500 hover:bg-red-600 text-white border-transparent">{hardest.successRate}% نسبة نجاح</Badge>
-                      <span className="text-sm font-medium text-muted-foreground">{hardest.wrongCount} طلاب أخطأوا فيه</span>
-                    </div>
-                  </div>
-                );
-              })()}
-            </Card>
-
-            <Card className="p-6 border-r-4 border-r-emerald-500 bg-emerald-500/5 border-l-0 border-y-0 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
-              <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-emerald-600 dark:text-emerald-400 relative z-10"><Trophy className="h-5 w-5" /> أسهل سؤال في الاختبار</h3>
-              {(() => {
-                const easiest = questionStats.reduce((prev, current) => (prev.successRate > current.successRate) ? prev : current);
-                return (
-                  <div className="relative z-10">
-                    <p className="font-bold text-lg mb-3 leading-relaxed text-foreground">{easiest.text}</p>
-                    <div className="flex items-center gap-3">
-                      <Badge className="bg-emerald-500 text-white font-mono text-sm px-3 py-1 border-transparent hover:bg-emerald-600">{easiest.successRate}% نسبة نجاح</Badge>
-                      <span className="text-sm font-medium text-muted-foreground">{easiest.correctCount} طلاب أجابوا بشكل صحيح</span>
-                    </div>
-                  </div>
-                );
-              })()}
-            </Card>
-          </div>
-        )}
-
-        {results.length > 0 && (
-          <div>
-            <h2 className="text-lg font-bold mb-4 flex items-center gap-2"><Target className="h-5 w-5" /> تحليل الأسئلة</h2>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {questionStats.map((qs) => (
-                <Card key={qs.index} className="p-4">
-                  <div className="flex items-start gap-3">
-                    <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 text-sm font-bold ${qs.successRate >= 70 ? "bg-success/10 text-success" : qs.successRate >= 40 ? "bg-warning/10 text-warning" : "bg-destructive/10 text-destructive"}`}>{qs.index}</div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium line-clamp-1">{qs.text}</p>
-                      <div className="flex items-center gap-3 mt-2">
-                        <span className="text-xs text-success flex items-center gap-1"><CheckCircle2 className="h-3 w-3" /> {qs.correctCount}</span>
-                        <span className="text-xs text-destructive flex items-center gap-1"><XCircle className="h-3 w-3" /> {qs.wrongCount}</span>
+          <div className="grid gap-8 lg:grid-cols-[1fr,400px]">
+            <div className="space-y-8">
+              <div className="grid gap-4 md:grid-cols-2 animate-fade-in shadow-sm">
+                <Card className="p-6 border-r-4 border-r-orange-500 bg-orange-500/5 border-l-0 border-y-0 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
+                  <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-orange-600 dark:text-orange-400 relative z-10"><Target className="h-5 w-5" /> أصعب سؤال في الاختبار</h3>
+                  {(() => {
+                    const hardest = questionStats.reduce((prev, current) => (prev.successRate < current.successRate) ? prev : current);
+                    return (
+                      <div className="relative z-10">
+                        <p className="font-bold text-lg mb-3 leading-relaxed text-foreground">{hardest.text}</p>
+                        <div className="flex items-center gap-3">
+                          <Badge variant="destructive" className="font-mono text-sm px-3 py-1 bg-red-500 hover:bg-red-600 text-white border-transparent">{hardest.successRate}% نسبة نجاح</Badge>
+                          <span className="text-sm font-medium text-muted-foreground">{hardest.wrongCount} طلاب أخطأوا فيه</span>
+                        </div>
                       </div>
-                      <div className="mt-2 h-2 rounded-full bg-muted overflow-hidden">
-                        <div className={`h-full rounded-full transition-all ${qs.successRate >= 70 ? "bg-success" : qs.successRate >= 40 ? "bg-warning" : "bg-destructive"}`} style={{ width: `${qs.successRate}%` }} />
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">{qs.successRate}% نسبة النجاح</p>
-                    </div>
-                  </div>
+                    );
+                  })()}
                 </Card>
-              ))}
+
+                <Card className="p-6 border-r-4 border-r-emerald-500 bg-emerald-500/5 border-l-0 border-y-0 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
+                  <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-emerald-600 dark:text-emerald-400 relative z-10"><Trophy className="h-5 w-5" /> أسهل سؤال في الاختبار</h3>
+                  {(() => {
+                    const easiest = questionStats.reduce((prev, current) => (prev.successRate > current.successRate) ? prev : current);
+                    return (
+                      <div className="relative z-10">
+                        <p className="font-bold text-lg mb-3 leading-relaxed text-foreground">{easiest.text}</p>
+                        <div className="flex items-center gap-3">
+                          <Badge className="bg-emerald-500 text-white font-mono text-sm px-3 py-1 border-transparent hover:bg-emerald-600">{easiest.successRate}% نسبة نجاح</Badge>
+                          <span className="text-sm font-medium text-muted-foreground">{easiest.correctCount} طلاب أجابوا بشكل صحيح</span>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </Card>
+              </div>
+
+              <div>
+                <h2 className="text-lg font-bold mb-4 flex items-center gap-2"><Target className="h-5 w-5" /> تحليل الأسئلة</h2>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
+                  {questionStats.map((qs) => (
+                    <Card key={qs.index} className="p-4">
+                      <div className="flex items-start gap-3">
+                        <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 text-sm font-bold ${qs.successRate >= 70 ? "bg-success/10 text-success" : qs.successRate >= 40 ? "bg-warning/10 text-warning" : "bg-destructive/10 text-destructive"}`}>{qs.index}</div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium line-clamp-1">{qs.text}</p>
+                          <div className="flex items-center gap-3 mt-2">
+                            <span className="text-xs text-success flex items-center gap-1"><CheckCircle2 className="h-3 w-3" /> {qs.correctCount}</span>
+                            <span className="text-xs text-destructive flex items-center gap-1"><XCircle className="h-3 w-3" /> {qs.wrongCount}</span>
+                          </div>
+                          <div className="mt-2 h-2 rounded-full bg-muted overflow-hidden">
+                            <div className={`h-full rounded-full transition-all ${qs.successRate >= 70 ? "bg-success" : qs.successRate >= 40 ? "bg-warning" : "bg-destructive"}`} style={{ width: `${qs.successRate}%` }} />
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">{qs.successRate}% نسبة النجاح</p>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <Card className="p-6">
+                <h3 className="text-lg font-bold mb-6 flex items-center gap-2"><BarChart3 className="h-5 w-5" /> توزيع الدرجات</h3>
+                <div className="h-[300px] w-full" dir="ltr">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={scoreDistribution}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                      <XAxis dataKey="range" fontSize={12} tickLine={false} axisLine={false} />
+                      <YAxis fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
+                      <RechartsTooltip 
+                        cursor={{ fill: 'transparent' }}
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            return (
+                              <div className="bg-card border p-2 rounded-lg shadow-sm text-xs font-bold">
+                                {payload[0].value} طلاب
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                      <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                        {scoreDistribution.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="mt-4 grid grid-cols-2 gap-4">
+                  <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-center">
+                    <p className="text-2xl font-bold text-emerald-600">{passCount}</p>
+                    <p className="text-[10px] text-emerald-600 font-bold">ناجحون</p>
+                  </div>
+                  <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-center">
+                    <p className="text-2xl font-bold text-red-600">{results.length - passCount}</p>
+                    <p className="text-[10px] text-red-600 font-bold">راسبون</p>
+                  </div>
+                </div>
+              </Card>
             </div>
           </div>
         )}

@@ -1,12 +1,11 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { ThemeToggle } from "./ThemeToggle";
 import { Button } from "@/components/ui/button";
-import { GraduationCap, LayoutDashboard, Home, LogIn, LogOut, Database, HelpCircle } from "lucide-react";
+import { GraduationCap, LayoutDashboard, Home, LogIn, LogOut, Database, HelpCircle, Share2, Smartphone, Users } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { usePWAInstall } from "@/hooks/usePWAInstall";
-import { Share2, Smartphone } from "lucide-react";
 
 export function AppHeader() {
   const navigate = useNavigate();
@@ -62,10 +61,16 @@ export function AppHeader() {
           </Button>
           
           {user && (
-            <Button variant="ghost" size="sm" onClick={() => navigate("/banks")} className="gap-2 text-primary">
-              <Database className="h-4 w-4" />
-              <span className="hidden sm:inline-block">بنك الأسئلة</span>
-            </Button>
+            <div className="flex gap-1">
+              <Button variant="ghost" size="sm" onClick={() => navigate("/banks")} className="gap-2 text-primary">
+                <Database className="h-4 w-4" />
+                <span className="hidden sm:inline-block">البنوك</span>
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => navigate("/classes")} className="gap-2 text-primary">
+                <Users className="h-4 w-4" />
+                <span className="hidden sm:inline-block">الفصول</span>
+              </Button>
+            </div>
           )}
 
           <div className="mx-1 h-6 w-px bg-border hidden sm:block"></div>

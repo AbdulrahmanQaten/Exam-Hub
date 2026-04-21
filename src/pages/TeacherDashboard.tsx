@@ -16,6 +16,7 @@ import {
 import { getQuizzes, deleteQuiz, updateQuiz, duplicateQuiz, getResultsForQuiz, getActiveStudentsForQuiz, removeActiveStudent, type Quiz, type StudentResult, type ActiveStudent } from "@/lib/quizStore";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 type FilterStatus = "all" | "active" | "inactive";
 type FilterType = "all" | "roster" | "noroster";
@@ -28,6 +29,7 @@ interface QuizWithStats extends Quiz {
 export default function TeacherDashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  usePageTitle("لوحة تحكم المعلم");
   const [quizzesWithStats, setQuizzesWithStats] = useState<QuizWithStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);

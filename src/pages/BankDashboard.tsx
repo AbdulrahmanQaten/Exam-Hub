@@ -3,15 +3,18 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Plus, Trash2, Library, ChevronLeft } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { QuestionBank, getBanks, createBank, deleteBank } from "@/lib/bankStore";
 import { toast } from "sonner";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 export default function BankDashboard() {
   const navigate = useNavigate();
+  usePageTitle("بنوك الأسئلة");
   const { user, isLoading } = useAuth();
   
   const [banks, setBanks] = useState<QuestionBank[]>([]);
@@ -25,17 +28,17 @@ export default function BankDashboard() {
     if (!isLoading && !user) {
       navigate("/auth");
     } else if (user) {
-      loadBanks();
+      loadData();
     }
   }, [user, isLoading, navigate]);
 
-  const loadBanks = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
       const data = await getBanks(user!.id);
       setBanks(data);
     } catch (err: any) {
-      toast.error("حدث خطأ في جلب البنوك");
+      toast.error("حدث خطأ في جلب البيانات");
     } finally {
       setLoading(false);
     }
@@ -74,7 +77,7 @@ export default function BankDashboard() {
   if (isLoading) return <div className="p-8 text-center text-muted-foreground">جاري التحميل...</div>;
 
   return (
-    <div className="container py-8">
+    <div className="container py-8" dir="rtl">
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent className="text-right" dir="rtl">
           <AlertDialogHeader className="text-right sm:text-right">
@@ -96,9 +99,9 @@ export default function BankDashboard() {
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <Library className="h-8 w-8 text-primary" />
-            بنوك الأسئلة الخاصة بي
+            بنوك الأسئلة
           </h1>
-          <p className="text-muted-foreground mt-2">أنشئ بنك أسئلة واحتفظ بأسئلتك للرجوع إليها مستقبلاً وتكوين الاختبارات منها</p>
+          <p className="text-muted-foreground mt-2">أنشئ بنوك أسئلتك الخاصة لتنظيم وإدارة أسئلتك بسهولة</p>
         </div>
         
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -119,7 +122,7 @@ export default function BankDashboard() {
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">وصف البنك (اختياري)</label>
-                <Input placeholder="فصل دراسي أول، يغطي الجبر والهندسة..." value={newBankDesc} onChange={(e) => setNewBankDesc(e.target.value)} />
+                <Input placeholder="فصل دراسي أول، يغطي الجبر والهندسة..." value={newBankDesc} onChange={(e) => setNewDesc(e.target.value)} />
               </div>
               <Button onClick={handleCreateBank} className="w-full">إضافة البنك</Button>
             </div>
@@ -128,7 +131,7 @@ export default function BankDashboard() {
       </div>
 
       {loading ? (
-        <div className="text-center text-muted-foreground">جاري التحميل...</div>
+        <div className="text-center py-20">جاري التحميل...</div>
       ) : banks.length === 0 ? (
         <div className="text-center py-20 bg-muted/30 rounded-2xl border border-dashed">
           <Library className="h-16 w-16 mx-auto text-muted-foreground/30 mb-4" />
@@ -140,7 +143,7 @@ export default function BankDashboard() {
           {banks.map((bank) => (
             <Card 
               key={bank.id} 
-              className="p-5 hover:border-primary/50 transition-colors cursor-pointer group flex flex-col h-full"
+              className="p-5 hover:border-primary/50 transition-colors cursor-pointer group flex flex-col h-full relative"
               onClick={() => navigate(`/banks/${bank.id}`)}
             >
               <div className="flex justify-between items-start mb-4">
@@ -156,8 +159,8 @@ export default function BankDashboard() {
               {bank.description && <p className="text-sm text-muted-foreground line-clamp-2 mb-4">{bank.description}</p>}
               
               <div className="mt-auto pt-4 flex items-center text-sm font-medium text-primary">
-                الوصول للأسئلة
-                <ChevronLeft className="h-4 w-4 ml-1" />
+                تصفح الأسئلة
+                <ChevronLeft className="h-4 w-4 mr-1" />
               </div>
             </Card>
           ))}

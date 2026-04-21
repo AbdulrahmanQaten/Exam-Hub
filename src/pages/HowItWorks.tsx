@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   GraduationCap, ClipboardList, BookOpen, ShieldCheck, 
   BarChart, ArrowRight, CheckCircle2, CopyPlus, ImageIcon, Settings, 
-  FileSpreadsheet, Target
+  FileSpreadsheet, Target, Download
 } from "lucide-react";
 
 export default function HowItWorks() {

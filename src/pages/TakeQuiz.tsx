@@ -9,15 +9,17 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Clock, ArrowLeft, ArrowRight, Send, CheckCircle2, AlertTriangle, List, PanelRightClose } from "lucide-react";
+import { Clock, ArrowLeft, ArrowRight, Send, CheckCircle2, AlertTriangle, List, PanelRightClose, RefreshCw } from "lucide-react";
 import {
   getQuizById, getQuizByCode, submitResult, shuffleArray, addActiveStudent,
   type Quiz, type QuizQuestion,
 } from "@/lib/quizStore";
 import { toast } from "sonner";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 export default function TakeQuiz() {
   const { code } = useParams();
+  usePageTitle("حل الاختبار الجاري");
   const navigate = useNavigate();
   const location = useLocation();
   const { studentName, quizId, studentId } = (location.state || {}) as { studentName?: string; quizId?: string; studentId?: string };
@@ -26,7 +28,43 @@ export default function TakeQuiz() {
   const [preparedQuestions, setPreparedQuestions] = useState<QuizQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
+
+  useEffect(() => {
+    const handleOnline = () => { setIsOffline(false); toast.success("تم استعادة الاتصال بالإنترنت"); };
+    const handleOffline = () => { setIsOffline(true); toast.warning("أنت تعمل الآن في وضع الأوفلاين. إجاباتك تُحفظ محلياً."); };
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => { window.removeEventListener("online", handleOnline); window.removeEventListener("offline", handleOffline); };
+  }, []);
+
+  // Save to local storage
+  useEffect(() => {
+    if (quizId && studentName) {
+      const storageKey = `quiz_progress_${quizId}_${studentName}`;
+      localStorage.setItem(storageKey, JSON.stringify({ answers, currentIndex, timeLeft }));
+    }
+  }, [answers, currentIndex, timeLeft, quizId, studentName]);
+
+  // Load from local storage
+  useEffect(() => {
+    if (quizId && studentName) {
+      const storageKey = `quiz_progress_${quizId}_${studentName}`;
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        const { answers: sAnswers, currentIndex: sIndex, timeLeft: sTime } = JSON.parse(saved);
+        if (Object.keys(sAnswers).length > 0) {
+           setAnswers(sAnswers);
+           setCurrentIndex(sIndex);
+           if (sTime) setTimeLeft(sTime);
+           toast.info("تم استعادة تقدمك في الاختبار");
+        }
+      }
+    }
+  }, [quizId, studentName]);
+
   const [startTime] = useState(Date.now());
   const timerRef = useRef<ReturnType<typeof setInterval>>();
   const [showNav, setShowNav] = useState(false);
@@ -94,7 +132,7 @@ export default function TakeQuiz() {
       console.error(err);
       hasSubmittedRef.current = false;
     }
-  }, [quiz, studentName, studentId, startTime, code, navigate]);
+  }, [quiz, studentName, studentId, startTime, code, navigate, preparedQuestions]);
 
   // Warn on page close/refresh
   useEffect(() => {
@@ -250,6 +288,16 @@ export default function TakeQuiz() {
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium">السؤال {currentIndex + 1} من {preparedQuestions.length}</span>
             <div className="flex items-center gap-2">
+              {isOffline && (
+                <Badge variant="outline" className="gap-1.5 text-orange-600 border-orange-200 bg-orange-50">
+                  <AlertTriangle className="h-3.5 w-3.5" /> أوفلاين
+                </Badge>
+              )}
+              {isSyncing && (
+                <Badge variant="outline" className="gap-1.5 text-blue-600 border-blue-200 bg-blue-50">
+                  <RefreshCw className="h-3.5 w-3.5 animate-spin" /> مزامنة...
+                </Badge>
+              )}
               <Button variant={showNav ? "default" : "ghost"} size="sm" onClick={() => setShowNav(!showNav)} className="gap-1.5 h-8">
                 {showNav ? <PanelRightClose className="h-4 w-4" /> : <List className="h-4 w-4" />}
                 <span className="hidden sm:inline">قائمة الأسئلة</span>
@@ -355,7 +403,11 @@ export default function TakeQuiz() {
               <Button onClick={trySubmit} variant={answeredCount === preparedQuestions.length ? "default" : "outline"} className="gap-2 rounded-xl">
                 <Send className="h-4 w-4" /> إنهاء الاختبار
               </Button>
-              <Button onClick={goNext} disabled={currentIndex === preparedQuestions.length - 1} className="gap-2 rounded-xl">
+              <Button 
+                onClick={goNext} 
+                disabled={currentIndex === preparedQuestions.length - 1 || !answers[currentQ.id]} 
+                className="gap-2 rounded-xl"
+              >
                 التالي <ArrowLeft className="h-4 w-4" />
               </Button>
             </div>
