@@ -11,6 +11,10 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { 
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle 
+} from "@/components/ui/alert-dialog";
 import { Trash2, Plus, ArrowRight, Folder, FileQuestion, BookOpen, FileSpreadsheet, Download, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
@@ -37,6 +41,9 @@ export default function BankDetails() {
   const [qText, setQText] = useState("");
   const [qOptions, setQOptions] = useState<any[]>([]);
   const [qCorrectId, setQCorrectId] = useState("");
+
+  const [deleteUnitId, setDeleteUnitId] = useState<string | null>(null);
+  const [deleteQuestionId, setDeleteQuestionId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isLoading && !user) navigate("/auth");
@@ -73,15 +80,15 @@ export default function BankDetails() {
     }
   };
 
-  const handleDeleteUnit = async (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!confirm("سيتم حذف الوحدة وجميع الأسئلة التي بداخلها، متأكد؟")) return;
+  const handleDeleteUnit = async () => {
+    if (!deleteUnitId) return;
     try {
-      await deleteBankUnit(id);
-      setUnits(units.filter(u => u.id !== id));
-      setQuestions(questions.filter(q => q.unit_id !== id));
-      if (selectedUnit === id) setSelectedUnit(null);
+      await deleteBankUnit(deleteUnitId);
+      setUnits(units.filter(u => u.id !== deleteUnitId));
+      setQuestions(questions.filter(q => q.unit_id !== deleteUnitId));
+      if (selectedUnit === deleteUnitId) setSelectedUnit(null);
       toast.success("تم الحذف");
+      setDeleteUnitId(null);
     } catch {
       toast.error("خطأ في الحذف");
     }
@@ -115,11 +122,12 @@ export default function BankDetails() {
     }
   };
 
-  const handleDeleteQuestion = async (id: string) => {
-    if (!confirm("احذف السؤال؟")) return;
+  const handleDeleteQuestion = async () => {
+    if (!deleteQuestionId) return;
     try {
-      await deleteBankQuestion(id);
-      setQuestions(questions.filter(q => q.id !== id));
+      await deleteBankQuestion(deleteQuestionId);
+      setQuestions(questions.filter(q => q.id !== deleteQuestionId));
+      setDeleteQuestionId(null);
     } catch {
       toast.error("خطأ");
     }
@@ -226,6 +234,36 @@ export default function BankDetails() {
 
   return (
     <div className="container py-6" dir="rtl">
+      {/* Unit Delete Dialog */}
+      <AlertDialog open={!!deleteUnitId} onOpenChange={(open) => !open && setDeleteUnitId(null)}>
+        <AlertDialogContent className="text-right" dir="rtl">
+          <AlertDialogHeader className="text-right sm:text-right">
+            <AlertDialogTitle>حذف هذه الوحدة؟</AlertDialogTitle>
+            <AlertDialogDescription>
+              سيتم حذف الوحدة وجميع الأسئلة التي بداخلها بشكل نهائي. لا يمكن التراجع عن هذا الإجراء.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row-reverse gap-2">
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteUnit} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">حذف</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Question Delete Dialog */}
+      <AlertDialog open={!!deleteQuestionId} onOpenChange={(open) => !open && setDeleteQuestionId(null)}>
+        <AlertDialogContent className="text-right" dir="rtl">
+          <AlertDialogHeader className="text-right sm:text-right">
+            <AlertDialogTitle>حذف هذا السؤال؟</AlertDialogTitle>
+            <AlertDialogDescription>سيتم حذف السؤال من البنك نهائياً.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row-reverse gap-2">
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteQuestion} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">حذف</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <div className="flex items-center gap-3 mb-6">
         <Button variant="ghost" size="icon" onClick={() => navigate("/banks")} className="rounded-full">
           <ArrowRight className="h-5 w-5" />
@@ -256,8 +294,8 @@ export default function BankDetails() {
             {units.map(u => (
               <div key={u.id} className={`flex items-center justify-between px-3 py-2 rounded-md text-sm transition-colors cursor-pointer group ${selectedUnit === u.id ? "bg-primary text-primary-foreground font-medium" : "hover:bg-muted"}`} onClick={() => setSelectedUnit(u.id)}>
                 <span className="truncate pr-2">{u.name}</span>
-                <button className="opacity-0 group-hover:opacity-100 p-1 hover:text-destructive" onClick={(e) => handleDeleteUnit(u.id, e)}>
-                  <Trash2 className="h-3 w-3" />
+                <button className="lg:opacity-0 lg:group-hover:opacity-100 p-1 hover:text-destructive transition-opacity" onClick={(e) => { e.stopPropagation(); setDeleteUnitId(u.id); }}>
+                  <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </div>
             ))}
@@ -291,7 +329,7 @@ export default function BankDetails() {
             </div>
           ) : (
             displayedQuestions.map((q, i) => (
-              <Card key={q.id} className="p-4">
+              <Card key={q.id} className="p-4 group/q">
                 <div className="flex justify-between items-start mb-3">
                   <div className="flex gap-3">
                     <div className="h-8 w-8 bg-muted rounded-md flex items-center justify-center font-bold text-sm shrink-0">{i+1}</div>
@@ -302,7 +340,7 @@ export default function BankDetails() {
                       <p className="font-medium text-base">{q.text}</p>
                     </div>
                   </div>
-                  <Button variant="ghost" size="icon" className="text-destructive h-8 w-8 shrink-0" onClick={() => handleDeleteQuestion(q.id)}>
+                  <Button variant="ghost" size="icon" className="text-destructive h-8 w-8 shrink-0 lg:opacity-0 lg:group-hover/q:opacity-100 transition-opacity" onClick={() => setDeleteQuestionId(q.id)}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
