@@ -21,6 +21,7 @@ import BankDetails from "./pages/BankDetails";
 import ClassManagement from "./pages/ClassManagement";
 import ClassDetails from "./pages/ClassDetails";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { MobileBottomNav } from "./components/MobileBottomNav";
 
 const queryClient = new QueryClient();
 
@@ -32,28 +33,33 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <AuthProvider>
-            <AppHeader />
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/how-it-works" element={<HowItWorks />} />
-              
-              {/* Protected Teacher/Bank Routes */}
-              <Route path="/banks" element={<ProtectedRoute><BankDashboard /></ProtectedRoute>} />
-              <Route path="/banks/:bankId" element={<ProtectedRoute><BankDetails /></ProtectedRoute>} />
-              <Route path="/classes" element={<ProtectedRoute><ClassManagement /></ProtectedRoute>} />
-              <Route path="/classes/:classId" element={<ProtectedRoute><ClassDetails /></ProtectedRoute>} />
-              <Route path="/teacher" element={<ProtectedRoute><TeacherDashboard /></ProtectedRoute>} />
-              <Route path="/teacher/create" element={<ProtectedRoute><CreateQuiz /></ProtectedRoute>} />
-              <Route path="/teacher/edit/:quizId" element={<ProtectedRoute><CreateQuiz /></ProtectedRoute>} />
-              <Route path="/teacher/results/:quizId" element={<ProtectedRoute><QuizResults /></ProtectedRoute>} />
-              
-              {/* Public Student Routes */}
-              <Route path="/quiz/:code" element={<StudentEntry />} />
-              <Route path="/quiz/:code/start" element={<TakeQuiz />} />
-              <Route path="/quiz/:code/complete" element={<QuizComplete />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <div className="flex min-h-screen flex-col pb-16 md:pb-0">
+              <AppHeader />
+              <main className="flex-1">
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/auth" element={<Auth />} />
+                  <Route path="/how-it-works" element={<HowItWorks />} />
+                  
+                  {/* Protected Teacher/Bank Routes */}
+                  <Route path="/banks" element={<ProtectedRoute><BankDashboard /></ProtectedRoute>} />
+                  <Route path="/banks/:bankId" element={<ProtectedRoute><BankDetails /></ProtectedRoute>} />
+                  <Route path="/classes" element={<ProtectedRoute><ClassManagement /></ProtectedRoute>} />
+                  <Route path="/classes/:classId" element={<ProtectedRoute><ClassDetails /></ProtectedRoute>} />
+                  <Route path="/teacher" element={<ProtectedRoute><TeacherDashboard /></ProtectedRoute>} />
+                  <Route path="/teacher/create" element={<ProtectedRoute><CreateQuiz /></ProtectedRoute>} />
+                  <Route path="/teacher/edit/:quizId" element={<ProtectedRoute><CreateQuiz /></ProtectedRoute>} />
+                  <Route path="/teacher/results/:quizId" element={<ProtectedRoute><QuizResults /></ProtectedRoute>} />
+                  
+                  {/* Public Student Routes */}
+                  <Route path="/quiz/:code" element={<StudentEntry />} />
+                  <Route path="/quiz/:code/start" element={<TakeQuiz />} />
+                  <Route path="/quiz/:code/complete" element={<QuizComplete />} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </main>
+              <MobileBottomNav />
+            </div>
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>

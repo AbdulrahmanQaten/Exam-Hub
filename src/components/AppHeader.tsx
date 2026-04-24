@@ -3,27 +3,18 @@ import { ThemeToggle } from "./ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { 
   GraduationCap, LayoutDashboard, Home, LogIn, LogOut, 
-  Database, HelpCircle, Smartphone, Users, Menu 
+  Database, HelpCircle, Smartphone, Users
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { usePWAInstall } from "@/hooks/usePWAInstall";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-import { useState } from "react";
 
 export function AppHeader() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, getUsername } = useAuth();
   const { isInstallable, installPWA } = usePWAInstall();
-  const [isOpen, setIsOpen] = useState(false);
   
   const isHome = location.pathname === "/";
   const isTeacher = location.pathname.startsWith("/teacher");
@@ -34,19 +25,18 @@ export function AppHeader() {
       toast.error("حدث خطأ أثناء تسجيل الخروج");
     } else {
       toast.success("تم تسجيل الخروج");
-      setIsOpen(false);
       navigate("/");
     }
   };
 
-  const NavItems = ({ mobile = false }: { mobile?: boolean }) => (
+  const NavItems = () => (
     <>
       {!isHome && (
         <Button 
           variant="ghost" 
-          size={mobile ? "lg" : "sm"} 
-          onClick={() => { navigate("/"); setIsOpen(false); }} 
-          className={`gap-3 ${mobile ? "justify-start w-full" : "hidden sm:flex"}`}
+          size="sm" 
+          onClick={() => navigate("/")} 
+          className="gap-2 hidden sm:flex"
         >
           <Home className="h-4 w-4" />
           الرئيسية
@@ -56,9 +46,9 @@ export function AppHeader() {
       {!isTeacher && (
         <Button 
           variant="ghost" 
-          size={mobile ? "lg" : "sm"} 
-          onClick={() => { navigate("/teacher"); setIsOpen(false); }} 
-          className={`gap-3 ${mobile ? "justify-start w-full" : "flex"}`}
+          size="sm" 
+          onClick={() => navigate("/teacher")} 
+          className="gap-2 hidden sm:flex"
         >
           <LayoutDashboard className="h-4 w-4" />
           لوحة المعلم
@@ -67,30 +57,30 @@ export function AppHeader() {
 
       <Button 
         variant="ghost" 
-        size={mobile ? "lg" : "sm"} 
-        onClick={() => { navigate("/how-it-works"); setIsOpen(false); }} 
-        className={`gap-3 ${mobile ? "justify-start w-full" : "px-2 sm:px-3 hidden md:flex"}`}
+        size="sm" 
+        onClick={() => navigate("/how-it-works")} 
+        className="gap-2 px-2 sm:px-3 hidden md:flex"
       >
         <HelpCircle className="h-4 w-4" />
-        <span>كيف يعمل؟</span>
+        <span className="hidden sm:inline-block">كيف يعمل؟</span>
       </Button>
       
       {user && (
         <>
           <Button 
             variant="ghost" 
-            size={mobile ? "lg" : "sm"} 
-            onClick={() => { navigate("/banks"); setIsOpen(false); }} 
-            className={`gap-3 text-primary ${mobile ? "justify-start w-full" : "hidden lg:flex"}`}
+            size="sm" 
+            onClick={() => navigate("/banks")} 
+            className="gap-2 text-primary hidden lg:flex"
           >
             <Database className="h-4 w-4" />
             <span>البنوك</span>
           </Button>
           <Button 
             variant="ghost" 
-            size={mobile ? "lg" : "sm"} 
-            onClick={() => { navigate("/classes"); setIsOpen(false); }} 
-            className={`gap-3 text-primary ${mobile ? "justify-start w-full" : "hidden lg:flex"}`}
+            size="sm" 
+            onClick={() => navigate("/classes")} 
+            className="gap-2 text-primary hidden lg:flex"
           >
             <Users className="h-4 w-4" />
             <span>الفصول</span>
@@ -103,60 +93,14 @@ export function AppHeader() {
   return (
     <header className="print:hidden sticky top-0 z-50 border-b bg-card/80 backdrop-blur-xl">
       <div className="container flex h-16 items-center justify-between px-4">
-        <div className="flex items-center gap-2">
-          {/* Mobile Menu */}
-          <div className="md:hidden">
-            <Sheet open={isOpen} onOpenChange={setIsOpen}>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-10 w-10">
-                  <Menu className="h-6 w-6" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-[280px] sm:w-[350px] text-right" dir="rtl">
-                <SheetHeader className="text-right pb-6 border-b">
-                  <SheetTitle className="flex items-center gap-2">
-                    <div className="h-8 w-8 rounded-lg gradient-primary flex items-center justify-center">
-                      <GraduationCap className="h-5 w-5 text-primary-foreground" />
-                    </div>
-                    <span>قائمة المنصة</span>
-                  </SheetTitle>
-                </SheetHeader>
-                <div className="flex flex-col gap-2 mt-6">
-                  {user && (
-                    <div className="px-4 py-3 bg-muted/50 rounded-xl mb-2">
-                      <p className="text-xs text-muted-foreground mb-1">مسجل كـ</p>
-                      <p className="font-bold text-primary truncate">{getUsername()}</p>
-                    </div>
-                  )}
-                  <NavItems mobile />
-                  
-                  <div className="my-4 border-t pt-4">
-                    {user ? (
-                      <Button variant="destructive" size="lg" onClick={handleLogout} className="w-full justify-start gap-3 rounded-xl">
-                        <LogOut className="h-5 w-5" />
-                        تسجيل الخروج
-                      </Button>
-                    ) : (
-                      <Button variant="default" size="lg" onClick={() => { navigate("/auth"); setIsOpen(false); }} className="w-full justify-start gap-3 rounded-xl">
-                        <LogIn className="h-5 w-5" />
-                        تسجيل الدخول
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </SheetContent>
-            </Sheet>
+        <div
+          className="flex items-center gap-2 cursor-pointer"
+          onClick={() => navigate("/")}
+        >
+          <div className="h-9 w-9 rounded-lg gradient-primary flex items-center justify-center shadow-sm">
+            <GraduationCap className="h-5 w-5 text-primary-foreground" />
           </div>
-
-          <div
-            className="flex items-center gap-2 cursor-pointer ml-1"
-            onClick={() => navigate("/")}
-          >
-            <div className="h-9 w-9 rounded-lg gradient-primary flex items-center justify-center shadow-sm">
-              <GraduationCap className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <span className="text-lg font-bold hidden sm:inline-block">اختبارات</span>
-          </div>
+          <span className="text-lg font-bold">اختبارات</span>
         </div>
 
         {/* Desktop Navigation */}
@@ -194,6 +138,20 @@ export function AppHeader() {
               <span className="hidden xs:inline-block mr-1 text-xs">تثبيت</span>
             </Button>
           )}
+
+          {/* Mobile User/Login - Simplified */}
+          <div className="md:hidden">
+            {user ? (
+               <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
+                 <span className="text-[10px] font-bold text-primary">{getUsername()?.substring(0, 2).toUpperCase()}</span>
+               </div>
+            ) : (
+              <Button variant="ghost" size="sm" onClick={() => navigate("/auth")} className="h-8 w-8 p-0">
+                <LogIn className="h-5 w-5 text-primary" />
+              </Button>
+            )}
+          </div>
+
           <ThemeToggle />
         </div>
       </div>
