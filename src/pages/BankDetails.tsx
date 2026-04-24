@@ -15,7 +15,6 @@ import { Trash2, Plus, ArrowRight, Folder, FileQuestion, BookOpen, FileSpreadshe
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import { usePageTitle } from "@/hooks/usePageTitle";
-import { ExcelColumnSelector } from "@/components/ExcelColumnSelector";
 
 export default function BankDetails() {
   const { bankId } = useParams<{ bankId: string }>();
@@ -38,10 +37,6 @@ export default function BankDetails() {
   const [qText, setQText] = useState("");
   const [qOptions, setQOptions] = useState<any[]>([]);
   const [qCorrectId, setQCorrectId] = useState("");
-
-  const [columnSelectorOpen, setColumnSelectorOpen] = useState(false);
-  const [excelColumns, setExcelColumns] = useState<string[]>([]);
-  const [excelRows, setExcelRows] = useState<Record<string, any>[]>([]);
 
   useEffect(() => {
     if (!isLoading && !user) navigate("/auth");
@@ -158,12 +153,8 @@ export default function BankDetails() {
         const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet);
         
         if (rows.length === 0) { toast.error("الملف فارغ"); return; }
-        const keys = Object.keys(rows[0]);
-        if (keys.length > 2) {
-           setExcelColumns(keys); setExcelRows(rows); setColumnSelectorOpen(true);
-        } else {
-           processImportedQuestions(rows);
-        }
+        
+        await processImportedQuestions(rows);
       } catch (err) {
         toast.error("حدث خطأ أثناء الاستيراد");
       } finally {
@@ -235,8 +226,6 @@ export default function BankDetails() {
 
   return (
     <div className="container py-6" dir="rtl">
-      <ExcelColumnSelector open={columnSelectorOpen} onClose={() => setColumnSelectorOpen(false)} columns={excelColumns} rows={excelRows} onConfirm={processImportedQuestions} />
-      
       <div className="flex items-center gap-3 mb-6">
         <Button variant="ghost" size="icon" onClick={() => navigate("/banks")} className="rounded-full">
           <ArrowRight className="h-5 w-5" />
