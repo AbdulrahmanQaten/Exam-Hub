@@ -376,29 +376,57 @@ export default function TakeQuiz() {
             </div>
           )}
 
-          <div className={`w-full ${showNav ? "max-w-2xl" : "max-w-2xl"} overflow-hidden`}>
-            <div className={`transition-all duration-150 ease-in-out ${isAnimating ? slideDirection === "left" ? "opacity-0 -translate-x-8" : "opacity-0 translate-x-8" : "opacity-100 translate-x-0"}`}>
-              <Card className="p-6" key={currentQ.id}>
+          <div className={`w-full ${showNav ? "max-w-2xl" : "max-w-2xl"}`}>
+            <div 
+              className={`transition-all duration-200 ease-in-out min-h-[350px] sm:min-h-[400px] ${
+                isAnimating 
+                  ? slideDirection === "left" ? "opacity-0 -translate-x-4" : "opacity-0 translate-x-4" 
+                  : "opacity-100 translate-x-0"
+              }`}
+            >
+              <Card className="p-4 sm:p-8 shadow-md border-2 border-muted/50" key={currentQ.id}>
                 <div className="mb-6">
-                  <Badge variant="secondary" className="mb-3">{currentQ.type === "mcq" ? "اختيار من متعدد" : "صح أو خطأ"}</Badge>
-                  <div>
-                <h2 className="text-xl md:text-2xl font-bold mb-6 leading-relaxed">{currentQ.text}</h2>
-                {currentQ.imageUrl && (
-                  <div className="mb-8 flex justify-center animate-fade-in relative group">
-                    <img src={currentQ.imageUrl} alt="مرفق توضيحي للسؤال" className="max-h-64 md:max-h-80 w-auto rounded-xl object-contain border-2 shadow-sm bg-muted/10 transition-transform hover:scale-[1.02]" />
-                  </div>
-                )}
-              </div>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2">
+                  <Badge variant="secondary" className="mb-3 px-3 py-1 rounded-lg">
+                    {currentQ.type === "mcq" ? "اختيار من متعدد" : "صح أو خطأ"}
+                  </Badge>
+                  <h2 className="text-xl md:text-2xl font-bold mb-6 leading-relaxed text-foreground">
+                    {currentQ.text}
+                  </h2>
+                  
+                  {currentQ.imageUrl && (
+                    <div className="mb-8 flex justify-center animate-fade-in relative group">
+                      <div className="relative overflow-hidden rounded-2xl border-2 border-muted bg-muted/5 p-1 transition-all group-hover:border-primary/30">
+                        <img 
+                          src={currentQ.imageUrl} 
+                          alt="مرفق توضيحي للسؤال" 
+                          className="max-h-64 md:max-h-80 w-auto object-contain transition-transform duration-300 group-hover:scale-[1.01]" 
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
                   {currentQ.options.map((opt, i) => {
                     const selected = answers[currentQ.id] === opt.id;
                     return (
-                      <button key={opt.id} onClick={() => setAnswers({ ...answers, [currentQ.id]: opt.id })} className={`w-full text-start rounded-xl border-2 p-4 transition-all flex items-center gap-3 ${selected ? "border-primary bg-primary/5" : "border-border hover:border-primary/30 hover:bg-muted/50"}`}>
-                        <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 text-sm font-bold ${selected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+                      <button 
+                        key={opt.id} 
+                        onClick={() => setAnswers({ ...answers, [currentQ.id]: opt.id })} 
+                        className={`w-full text-start rounded-xl border-2 p-4 transition-all flex items-center gap-3 active:scale-[0.98] ${
+                          selected 
+                            ? "border-primary bg-primary/5 ring-4 ring-primary/5" 
+                            : "border-border hover:border-primary/30 hover:bg-muted/50"
+                        }`}
+                      >
+                        <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 text-sm font-bold ${
+                          selected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                        }`}>
                           {selected ? <CheckCircle2 className="h-4 w-4" /> : i + 1}
                         </div>
-                        <span className={`text-base ${selected ? "font-medium" : ""}`}>{opt.text}</span>
+                        <span className={`text-base leading-snug ${selected ? "font-bold" : "font-medium"}`}>
+                          {opt.text}
+                        </span>
                       </button>
                     );
                   })}
@@ -406,19 +434,37 @@ export default function TakeQuiz() {
               </Card>
             </div>
 
-            <div className="flex items-center justify-between mt-6">
-              <Button variant="outline" onClick={goPrev} disabled={currentIndex === 0} className="gap-2 rounded-xl">
-                <ArrowRight className="h-4 w-4" /> السابق
+            <div className="grid grid-cols-3 gap-3 mt-8 pb-10">
+              <Button 
+                variant="outline" 
+                onClick={goPrev} 
+                disabled={currentIndex === 0} 
+                className="gap-2 rounded-xl h-12 sm:h-14 font-bold border-2 hover:bg-muted"
+              >
+                <ArrowRight className="h-5 w-5" /> 
+                <span className="hidden xs:inline">السابق</span>
               </Button>
-              <Button onClick={trySubmit} variant={answeredCount === preparedQuestions.length ? "default" : "outline"} className="gap-2 rounded-xl">
-                <Send className="h-4 w-4" /> إنهاء الاختبار
+              
+              <Button 
+                onClick={trySubmit} 
+                variant={answeredCount === preparedQuestions.length ? "default" : "outline"} 
+                className={`gap-2 rounded-xl h-12 sm:h-14 font-bold border-2 ${
+                  answeredCount === preparedQuestions.length 
+                    ? "bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg" 
+                    : "border-primary/20 text-primary hover:bg-primary/5"
+                }`}
+              >
+                <Send className="h-4 w-4" /> 
+                <span>إنهاء</span>
               </Button>
+
               <Button 
                 onClick={goNext} 
                 disabled={currentIndex === preparedQuestions.length - 1 || !answers[currentQ.id]} 
-                className="gap-2 rounded-xl"
+                className="gap-2 rounded-xl h-12 sm:h-14 font-bold bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg"
               >
-                التالي <ArrowLeft className="h-4 w-4" />
+                <span className="hidden xs:inline">التالي</span> 
+                <ArrowLeft className="h-5 w-5" />
               </Button>
             </div>
           </div>
