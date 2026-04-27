@@ -11,11 +11,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Clock, ArrowLeft, ArrowRight, Send, CheckCircle2, AlertTriangle, List, PanelRightClose, RefreshCw } from "lucide-react";
 import {
-  getQuizById, getQuizByCode, submitResult, shuffleArray, addActiveStudent,
+  getQuizById, getQuizByCode, submitResult, shuffleArray, addActiveStudent, removeActiveStudent,
   type Quiz, type QuizQuestion,
 } from "@/lib/quizStore";
 import { toast } from "sonner";
-import { usePageTitle } from "@/hooks/usePageTitle";
 
 export default function TakeQuiz() {
   const { code } = useParams();
@@ -90,10 +89,7 @@ export default function TakeQuiz() {
     getQuizByCode(code).then((found) => {
       if (!found) { navigate("/"); return; }
       setQuiz(found);
-      if (quizId && studentName) {
-        addActiveStudent(quizId, studentName, studentId);
-      }
-
+      
       let questions = [...found.questions];
       if (found.settings.shuffleQuestions) questions = shuffleArray(questions);
       if (found.settings.shuffleOptions) {
@@ -112,10 +108,16 @@ export default function TakeQuiz() {
     hasSubmittedRef.current = true;
     if (timerRef.current) clearInterval(timerRef.current);
     const timeTaken = Math.round((Date.now() - startTime) / 1000);
-    // إرفاق عدد المخالفات كإجابة مخفية للمعلم ليراها لاحقاً
     const finalAnswers = forceZero ? { _violations: violationsRef.current.toString() } : { ...answersRef.current, _violations: violationsRef.current.toString() };
     try {
       const result = await submitResult(quiz.id, studentName, finalAnswers, timeTaken, studentId);
+      
+      // التنظيف: حذف الطالب من قائمة النشطين فور التسليم بنجاح
+      await removeActiveStudent(quiz.id, studentName);
+      
+      const storageKey = `quiz_progress_${quiz.id}_${studentName}`;
+      localStorage.removeItem(storageKey);
+
       navigate(`/quiz/${code}/complete`, {
         state: { 
           score: result.score, 
@@ -134,6 +136,15 @@ export default function TakeQuiz() {
     }
   }, [quiz, studentName, studentId, startTime, code, navigate, preparedQuestions]);
 
+  // Cleanup session if tab is closed without submission
+  useEffect(() => {
+    return () => {
+      if (quizId && studentName && !hasSubmittedRef.current) {
+        removeActiveStudent(quizId, studentName).catch(() => {});
+      }
+    };
+  }, [quizId, studentName]);
+
   // Warn on page close/refresh
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -147,7 +158,6 @@ export default function TakeQuiz() {
     const handleLeave = () => {
       if (hasSubmittedRef.current) return;
       
-      // نمنع تسجيل مخالفات متكررة في نفس الثانية (مثل تداخل أحداث blur و hidden)
       const now = Date.now();
       if (now - lastViolationTime.current > 2000) {
         violationsRef.current += 1;
@@ -161,7 +171,7 @@ export default function TakeQuiz() {
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
-    window.addEventListener("blur", handleLeave); // تم إضافة حدث blur لالتقاط الشاشة المنقسمة
+    window.addEventListener("blur", handleLeave);
     
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
@@ -190,7 +200,6 @@ export default function TakeQuiz() {
     else handleSubmit();
   };
 
-  // Timer - auto-submit with current answers when time runs out
   useEffect(() => {
     if (!quiz?.settings.timerEnabled) return;
     timerRef.current = setInterval(() => {
