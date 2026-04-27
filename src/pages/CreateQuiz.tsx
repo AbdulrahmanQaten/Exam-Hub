@@ -6,10 +6,10 @@ import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import {
-  Plus, Trash2, Save, ArrowRight, Clock, Shuffle, CheckCircle2, XCircle, Upload, FileSpreadsheet, Users, Library, Download, Image as ImageIcon, Loader2, X, GripVertical, Search
+  Plus, Trash2, Save, ArrowRight, Clock, Shuffle, CheckCircle2, XCircle, Upload, FileSpreadsheet, Users, Library, Download, Image as ImageIcon, Loader2, X, GripVertical, Search, ShieldCheck, Globe
 } from "lucide-react";
 import {
-  createQuiz, updateQuiz, getQuizById, generateQuestionId, generateOptionId, uploadQuestionImage,
+  createQuiz, updateQuiz, getQuizById, generateQuestionId, generateOptionId, uploadQuestionImage, getPublicIP,
   type QuizQuestion, type QuizSettings, type StudentRosterEntry,
 } from "@/lib/quizStore";
 import { toast } from "sonner";
@@ -162,6 +162,7 @@ export default function CreateQuiz() {
     shuffleOptions: false,
     showFeedback: false,
   });
+  const [allowedIP, setAllowedIP] = useState<string | null>(null);
   const [roster, setRoster] = useState<StudentRosterEntry[]>([]);
   const [saving, setSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -175,12 +176,14 @@ export default function CreateQuiz() {
   const [classImportOpen, setClassImportOpen] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState<Record<number, boolean>>({});
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
+  const sensors = useSensor(PointerSensor, {
+    activationConstraint: {
+      distance: 8,
+    },
+  });
+
+  const sensorsList = useSensors(
+    sensors,
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
@@ -194,6 +197,7 @@ export default function CreateQuiz() {
           setQuestions(quiz.questions);
           setSettings(quiz.settings);
           setRoster(quiz.roster || []);
+          setAllowedIP(quiz.allowed_ip || null);
         } else {
           navigate("/teacher");
         }
@@ -428,6 +432,17 @@ export default function CreateQuiz() {
     toast.success("تم بدء تحميل القالب");
   };
 
+  const handleToggleIPLock = async (checked: boolean) => {
+    if (checked) {
+      const myIP = await getPublicIP();
+      setAllowedIP(myIP);
+      toast.success("تم تفعيل قفل الشبكة. سيتمكن فقط الطلاب المتصلون بنفس شبكتك الحالية (" + myIP + ") من الدخول.");
+    } else {
+      setAllowedIP(null);
+      toast.info("تم إيقاف قفل الشبكة. يمكن للطلاب من أي مكان الدخول.");
+    }
+  };
+
   const handleSave = async () => {
     if (!title.trim()) { toast.error("يرجى إدخال عنوان الاختبار"); return; }
     if (questions.length === 0) { toast.error("يرجى إضافة سؤال واحد على الأقل"); return; }
@@ -443,11 +458,11 @@ export default function CreateQuiz() {
       if (isEditing) {
         const existing = await getQuizById(quizId!);
         if (existing) {
-          await updateQuiz({ ...existing, title, questions, settings, roster: roster.length > 0 ? roster : undefined });
+          await updateQuiz({ ...existing, title, questions, settings, roster: roster.length > 0 ? roster : undefined, allowed_ip: allowedIP });
           toast.success("تم تعديل الاختبار بنجاح");
         }
       } else {
-        const quiz = await createQuiz(title, questions, settings, roster.length > 0 ? roster : undefined);
+        const quiz = await createQuiz(title, questions, settings, roster.length > 0 ? roster : undefined, allowedIP);
         toast.success("تم إنشاء الاختبار بنجاح! الرمز: " + quiz.code);
       }
       navigate("/teacher");
@@ -479,7 +494,7 @@ export default function CreateQuiz() {
         <div className="grid gap-8 lg:grid-cols-[1fr,320px]">
           <div className="space-y-4">
             <DndContext 
-              sensors={sensors}
+              sensors={sensorsList}
               collisionDetection={closestCenter}
               onDragEnd={handleDragEnd}
             >
@@ -550,8 +565,27 @@ export default function CreateQuiz() {
 
           <div className="space-y-4">
             <Card className="p-5 sticky top-20">
-              <h3 className="text-lg font-bold mb-4">إعدادات الاختبار</h3>
-              <div className="space-y-5">
+              <h3 className="text-lg font-bold mb-4 border-b pb-2">إعدادات الاختبار</h3>
+              
+              <div className="space-y-4">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck className={`h-4 w-4 ${allowedIP ? 'text-primary' : 'text-muted-foreground'}`} />
+                      <Label className="cursor-pointer" htmlFor="ip-lock">قفل الشبكة (IP Lock)</Label>
+                    </div>
+                    <Switch id="ip-lock" checked={!!allowedIP} onCheckedChange={handleToggleIPLock} />
+                  </div>
+                  {allowedIP && (
+                    <div className="bg-primary/5 p-2 rounded-lg border border-primary/20 animate-in slide-in-from-top-1">
+                      <p className="text-[10px] text-muted-foreground leading-relaxed">
+                        مفعل حالياً للشبكة: <code className="bg-primary/10 px-1 rounded font-bold text-primary">{allowedIP}</code>
+                        <br />سيمنع الطلاب من خارج شبكتك الحالية من الدخول.
+                      </p>
+                    </div>
+                  )}
+                </div>
+
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" /><Label>مؤقت زمني</Label></div>
                   <Switch checked={settings.timerEnabled} onCheckedChange={(checked) => setSettings({ ...settings, timerEnabled: checked })} />
