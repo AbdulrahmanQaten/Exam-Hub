@@ -5,8 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Clock, Shuffle, ClipboardList, UserCircle, KeyRound, Globe, ShieldAlert } from "lucide-react";
-import { getQuizByCode, getResultsForQuiz, addActiveStudent, type Quiz } from "@/lib/quizStore";
-import { toast } from "sonner";
+import { getQuizByCode, checkStudentCompleted, addActiveStudent, type Quiz } from "@/lib/quizStore";
 
 export default function StudentEntry() {
   const { code } = useParams<{ code: string }>();
@@ -54,14 +53,15 @@ export default function StudentEntry() {
         if (!entry) { setError("رقم الطالب غير مسجل في هذا الاختبار"); return; }
         finalName = entry.name;
         
-        const results = await getResultsForQuiz(quiz.id);
-        if (results.find(r => r.studentId === finalId)) {
+        // Secure server-side completion check
+        const hasCompleted = await checkStudentCompleted(quiz.id, finalId);
+        if (hasCompleted) {
           setError("لقد أديت هذا الاختبار مسبقاً ولا يمكنك الدخول مرة أخرى"); return;
         }
       } else {
         if (!finalName) { setError("يرجى إدخال اسمك"); return; }
-        const results = await getResultsForQuiz(quiz.id);
-        if (results.find(r => r.studentName === finalName)) {
+        const hasCompleted = await checkStudentCompleted(quiz.id, undefined, finalName);
+        if (hasCompleted) {
           setError("يوجد طالب بهذا الاسم أدى الاختبار مسبقاً. إذا كنت شخصاً مختلفاً أضف لقبك"); return;
         }
       }

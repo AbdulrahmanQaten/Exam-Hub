@@ -9,7 +9,7 @@ import {
   Plus, Trash2, Save, ArrowRight, Clock, Shuffle, CheckCircle2, XCircle, Upload, FileSpreadsheet, Users, Library, Download, Image as ImageIcon, Loader2, X, GripVertical, Search, ShieldCheck, Globe
 } from "lucide-react";
 import {
-  createQuiz, updateQuiz, getQuizById, generateQuestionId, generateOptionId, uploadQuestionImage, getPublicIP,
+  createQuiz, updateQuiz, getQuizById, generateQuestionId, generateOptionId, uploadQuestionImage, lockQuizToCurrentIP,
   type QuizQuestion, type QuizSettings, type StudentRosterEntry,
 } from "@/lib/quizStore";
 import { toast } from "sonner";
@@ -434,9 +434,18 @@ export default function CreateQuiz() {
 
   const handleToggleIPLock = async (checked: boolean) => {
     if (checked) {
-      const myIP = await getPublicIP();
-      setAllowedIP(myIP);
-      toast.success("تم تفعيل قفل الشبكة. سيتمكن فقط الطلاب المتصلون بنفس شبكتك الحالية (" + myIP + ") من الدخول.");
+      if (!isEditing) {
+        toast.info("يرجى حفظ الاختبار أولاً لتتمكن من قفل الشبكة، أو سيتم قفلها تلقائياً عند النشر.");
+        setAllowedIP("DETECT_ON_SAVE");
+        return;
+      }
+      try {
+        const detectedIP = await lockQuizToCurrentIP(quizId!);
+        setAllowedIP(detectedIP);
+        toast.success("تم تفعيل قفل الشبكة. سيتمكن فقط الطلاب المتصلون بنفس شبكتك الحالية (" + detectedIP + ") من الدخول.");
+      } catch (err) {
+        toast.error("حدث خطأ أثناء اكتشاف الشبكة.");
+      }
     } else {
       setAllowedIP(null);
       toast.info("تم إيقاف قفل الشبكة. يمكن للطلاب من أي مكان الدخول.");
@@ -462,8 +471,14 @@ export default function CreateQuiz() {
           toast.success("تم تعديل الاختبار بنجاح");
         }
       } else {
-        const quiz = await createQuiz(title, questions, settings, roster.length > 0 ? roster : undefined, allowedIP);
-        toast.success("تم إنشاء الاختبار بنجاح! الرمز: " + quiz.code);
+        const quiz = await createQuiz(title, questions, settings, roster.length > 0 ? roster : undefined, allowedIP === "DETECT_ON_SAVE" ? "PENDING" : allowedIP);
+        
+        if (allowedIP === "DETECT_ON_SAVE") {
+           const detected = await lockQuizToCurrentIP(quiz.id);
+           toast.success("تم إنشاء الاختبار وتفعيل قفل الشبكة: " + detected);
+        } else {
+           toast.success("تم إنشاء الاختبار بنجاح! الرمز: " + quiz.code);
+        }
       }
       navigate("/teacher");
     } catch (err) {
@@ -579,8 +594,14 @@ export default function CreateQuiz() {
                   {allowedIP && (
                     <div className="bg-primary/5 p-2 rounded-lg border border-primary/20 animate-in slide-in-from-top-1">
                       <p className="text-[10px] text-muted-foreground leading-relaxed">
-                        مفعل حالياً للشبكة: <code className="bg-primary/10 px-1 rounded font-bold text-primary">{allowedIP}</code>
-                        <br />سيمنع الطلاب من خارج شبكتك الحالية من الدخول.
+                        {allowedIP === "DETECT_ON_SAVE" ? (
+                           <span className="flex items-center gap-1.5"><Loader2 className="h-3 w-3 animate-spin" /> سيتم اكتشاف شبكتك عند الحفظ...</span>
+                        ) : (
+                          <>
+                            مفعل حالياً للشبكة: <code className="bg-primary/10 px-1 rounded font-bold text-primary">{allowedIP}</code>
+                            <br />سيمنع الطلاب من خارج شبكتك الحالية من الدخول.
+                          </>
+                        )}
                       </p>
                     </div>
                   )}

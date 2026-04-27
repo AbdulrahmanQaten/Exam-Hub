@@ -49,7 +49,7 @@ export interface StudentResult {
   totalQuestions: number;
   timeTaken: number;
   completedAt: string;
-  questions?: QuizQuestion[]; // Added to allow showing feedback in complete page
+  questions?: QuizQuestion[];
 }
 
 export interface ActiveStudent {
@@ -62,19 +62,15 @@ export interface ActiveStudent {
 export const generateQuestionId = () => Math.random().toString(36).substring(2, 9);
 export const generateOptionId = () => Math.random().toString(36).substring(2, 9);
 
-export async function getPublicIP(): Promise<string> {
-  try {
-    const res = await fetch('https://api.ipify.org?format=json');
-    const data = await res.json();
-    return data.ip;
-  } catch {
-    try {
-      const res = await fetch('https://icanhazip.com');
-      return (await res.text()).trim();
-    } catch {
-      return "0.0.0.0";
-    }
-  }
+/**
+ * Server-side IP Lock: Detects your IP in the database directly
+ */
+export async function lockQuizToCurrentIP(quizId: string): Promise<string> {
+  const { data, error } = await supabase.rpc("lock_quiz_to_current_ip", {
+    p_quiz_id: quizId
+  });
+  if (error) throw error;
+  return data;
 }
 
 export async function createQuiz(title: string, questions: QuizQuestion[], settings: QuizSettings, roster?: StudentRosterEntry[], allowed_ip?: string | null): Promise<Quiz> {
@@ -159,16 +155,13 @@ export async function getQuizById(id: string): Promise<Quiz | null> {
 }
 
 export async function getQuizByCode(code: string): Promise<Quiz | null> {
-  const ip = await getPublicIP();
-  // We use the new RPC v2 that checks for IP Lock
-  const { data, error } = await supabase.rpc("get_public_quiz_v2", { 
-    p_code: code.toUpperCase(),
-    p_client_ip: ip
+  // Use V3 that detects client IP automatically on server
+  const { data, error } = await supabase.rpc("get_public_quiz_v3", { 
+    p_code: code.toUpperCase()
   });
 
   if (error || !data) return null;
   
-  // If the server returned an error object inside JSON
   if (data.error === 'network_lock') {
     throw new Error(data.message);
   }
@@ -181,8 +174,7 @@ export async function getQuizByCode(code: string): Promise<Quiz | null> {
     settings: data.settings as any,
     roster: data.roster as any,
     isActive: data.is_active,
-    createdAt: data.created_at,
-    allowed_ip: data.allowed_ip
+    createdAt: data.created_at
   };
 }
 
@@ -244,7 +236,6 @@ export async function duplicateQuiz(quiz: Quiz): Promise<Quiz> {
 }
 
 export async function submitResult(quizId: string, studentName: string, answers: Record<string, string>, timeTaken: number, studentId?: string): Promise<any> {
-  // Use secure RPC for server-side scoring and validation
   const { data, error } = await supabase.rpc("submit_quiz_result", {
     p_quiz_id: quizId,
     p_student_name: studentName,
@@ -255,6 +246,16 @@ export async function submitResult(quizId: string, studentName: string, answers:
 
   if (error) throw error;
   return data;
+}
+
+export async function checkStudentCompleted(quizId: string, studentId?: string, studentName?: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc("check_student_completed", {
+    p_quiz_id: quizId,
+    p_student_id: studentId || null,
+    p_student_name: studentName || null
+  });
+  if (error) return false;
+  return !!data;
 }
 
 export async function getResultsForQuiz(quizId: string): Promise<StudentResult[]> {
