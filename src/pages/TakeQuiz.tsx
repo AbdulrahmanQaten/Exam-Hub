@@ -237,7 +237,7 @@ export default function TakeQuiz() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [currentIndex, answers, currentQ.id]); // نحتاج التحديث عند تغيير السؤال أو الإجابة لضمان عمل القيود
+  }, [currentIndex, answers]); // نكتفي بـ currentIndex و answers كاعتماديات
 
   const goNext = () => { if (currentIndex < preparedQuestions.length - 1) goTo(currentIndex + 1); };
   const goPrev = () => { if (currentIndex > 0) goTo(currentIndex - 1); };
