@@ -264,7 +264,7 @@ export default function TakeQuiz() {
   const isTimeLow = quiz.settings.timerEnabled && timeLeft <= 60;
 
   return (
-    <div className="min-h-[calc(100vh-4rem)]">
+    <div className="min-h-[calc(100vh-4rem)]" dir="rtl">
       <AlertDialog open={showSubmitWarning} onOpenChange={setShowSubmitWarning}>
         <AlertDialogContent className="text-right" dir="rtl">
           <AlertDialogHeader className="text-right sm:text-right">
