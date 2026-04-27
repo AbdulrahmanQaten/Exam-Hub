@@ -219,8 +219,25 @@ export default function TakeQuiz() {
     if (index === currentIndex || isAnimating) return;
     setSlideDirection(index > currentIndex ? "left" : "right");
     setIsAnimating(true);
-    setTimeout(() => { setCurrentIndex(index); setIsAnimating(false); }, 150);
+    
+    // التمرير لأعلى الصفحة عند الانتقال لسؤال جديد
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    setTimeout(() => { 
+      setCurrentIndex(index); 
+      setIsAnimating(false); 
+    }, 150);
   };
+
+  // دعم التنقل عبر لوحة المفاتيح
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "ArrowLeft") goNext();
+      if (e.key === "ArrowRight") goPrev();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [currentIndex, answers, currentQ.id]); // نحتاج التحديث عند تغيير السؤال أو الإجابة لضمان عمل القيود
 
   const goNext = () => { if (currentIndex < preparedQuestions.length - 1) goTo(currentIndex + 1); };
   const goPrev = () => { if (currentIndex > 0) goTo(currentIndex - 1); };

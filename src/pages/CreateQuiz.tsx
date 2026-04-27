@@ -258,18 +258,24 @@ export default function CreateQuiz() {
   };
 
   const handleImportBankQuestions = (imported: BankQuestion[]) => {
-    const newQuestions: QuizQuestion[] = imported.map(q => ({
-      id: generateQuestionId(),
-      type: q.type,
-      text: q.text,
-      imageUrl: (q as any).image_url,
-      options: q.options.map((opt: any) => ({
-        id: opt.id,
-        text: opt.text
-      })),
-      correctOptionId: q.correct_option_id
-    }));
+    const newQuestions: QuizQuestion[] = imported.map(q => {
+      // التأكد من أن النوع يتم تمريره بشكل صحيح وصارم
+      const type = (q.type === "truefalse" || q.type === "mcq") ? q.type : "mcq";
+      
+      return {
+        id: generateQuestionId(),
+        type: type,
+        text: q.text,
+        imageUrl: (q as any).image_url,
+        options: q.options.map((opt: any) => ({
+          id: opt.id,
+          text: opt.text
+        })),
+        correctOptionId: q.correct_option_id
+      };
+    });
     setQuestions([...questions, ...newQuestions]);
+    toast.success(`تم استيراد ${newQuestions.length} سؤال من البنك`);
   };
 
   const handleQuestionImageUpload = async (qIndex: number, file: File) => {
