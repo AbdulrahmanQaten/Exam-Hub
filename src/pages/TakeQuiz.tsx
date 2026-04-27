@@ -15,6 +15,7 @@ import {
   type Quiz, type QuizQuestion,
 } from "@/lib/quizStore";
 import { toast } from "sonner";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 export default function TakeQuiz() {
   const { code } = useParams();
