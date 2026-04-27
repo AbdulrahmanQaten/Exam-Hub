@@ -113,7 +113,6 @@ export default function TakeQuiz() {
     try {
       const result = await submitResult(quiz.id, studentName, finalAnswers, timeTaken, studentId);
       
-      // التنظيف: حذف الطالب من قائمة النشطين فور التسليم بنجاح
       await removeActiveStudent(quiz.id, studentName);
       
       const storageKey = `quiz_progress_${quiz.id}_${studentName}`;
@@ -137,7 +136,6 @@ export default function TakeQuiz() {
     }
   }, [quiz, studentName, studentId, startTime, code, navigate, preparedQuestions]);
 
-  // Cleanup session if tab is closed without submission
   useEffect(() => {
     return () => {
       if (quizId && studentName && !hasSubmittedRef.current) {
@@ -146,7 +144,6 @@ export default function TakeQuiz() {
     };
   }, [quizId, studentName]);
 
-  // Warn on page close/refresh
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (!hasSubmittedRef.current) { e.preventDefault(); e.returnValue = "سيتم إلغاء اختبارك!"; }
@@ -201,35 +198,14 @@ export default function TakeQuiz() {
     else handleSubmit();
   };
 
-  useEffect(() => {
-    if (!quiz?.settings.timerEnabled) return;
-    timerRef.current = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev === 61) {
-          toast.warning("تنبيه: تبقى دقيقة واحدة فقط على انتهاء الاختبار!", { duration: 6000 });
-        }
-        if (prev <= 1) { handleSubmit(false); return 0; }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [quiz, handleSubmit]);
-
   const goTo = (index: number) => {
     if (index === currentIndex || isAnimating) return;
     setSlideDirection(index > currentIndex ? "left" : "right");
     setIsAnimating(true);
-    
-    // التمرير لأعلى الصفحة عند الانتقال لسؤال جديد
     window.scrollTo({ top: 0, behavior: 'smooth' });
-
-    setTimeout(() => { 
-      setCurrentIndex(index); 
-      setIsAnimating(false); 
-    }, 150);
+    setTimeout(() => { setCurrentIndex(index); setIsAnimating(false); }, 150);
   };
 
-  // دعم التنقل عبر لوحة المفاتيح
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "ArrowLeft") goNext();
@@ -237,7 +213,7 @@ export default function TakeQuiz() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [currentIndex, answers]); // نكتفي بـ currentIndex و answers كاعتماديات
+  }, [currentIndex, answers]);
 
   const goNext = () => { if (currentIndex < preparedQuestions.length - 1) goTo(currentIndex + 1); };
   const goPrev = () => { if (currentIndex > 0) goTo(currentIndex - 1); };
@@ -344,23 +320,36 @@ export default function TakeQuiz() {
       <div className="container py-6">
         <div className={`flex gap-6 ${showNav ? "" : "justify-center"}`}>
           {showNav && (
-            <div className="hidden md:block w-72 shrink-0">
+            <div className="hidden md:block w-72 shrink-0" dir="rtl">
               <Card className="sticky top-36 overflow-hidden">
-                <div className="p-3 border-b bg-muted/50">
-                  <h3 className="text-sm font-bold flex items-center gap-2"><List className="h-4 w-4" /> قائمة الأسئلة</h3>
+                <div className="p-3 border-b bg-muted/50 text-right">
+                  <h3 className="text-sm font-bold flex items-center justify-start gap-2">
+                    <List className="h-4 w-4" /> 
+                    <span>قائمة الأسئلة</span>
+                  </h3>
                   <p className="text-xs text-muted-foreground mt-1">{answeredCount} من {preparedQuestions.length} مُجاب</p>
                 </div>
-                <ScrollArea className="h-[calc(100vh-280px)]">
+                <ScrollArea className="h-[calc(100vh-280px)]" dir="rtl">
                   <div className="p-2 space-y-1">
                     {preparedQuestions.map((q, i) => {
                       const isAnswered = !!answers[q.id];
                       const isCurrent = i === currentIndex;
                       return (
-                        <button key={q.id} onClick={() => goTo(i)} className={`w-full text-start rounded-lg p-2.5 transition-all flex items-start gap-2.5 text-sm ${isCurrent ? "bg-primary/10 border border-primary/30" : isAnswered ? "bg-success/5 hover:bg-success/10" : "hover:bg-muted/80"}`}>
-                          <span className={`h-6 w-6 rounded-md flex items-center justify-center shrink-0 text-xs font-bold ${isCurrent ? "bg-primary text-primary-foreground" : isAnswered ? "bg-success text-success-foreground" : "bg-muted text-muted-foreground"}`}>
+                        <button 
+                          key={q.id} 
+                          onClick={() => goTo(i)} 
+                          className={`w-full text-right rounded-lg p-2.5 transition-all flex items-start gap-2.5 text-sm ${
+                            isCurrent ? "bg-primary/10 border border-primary/30" : isAnswered ? "bg-success/5 hover:bg-success/10" : "hover:bg-muted/80"
+                          }`}
+                        >
+                          <span className={`h-6 w-6 rounded-md flex items-center justify-center shrink-0 text-xs font-bold ${
+                            isCurrent ? "bg-primary text-primary-foreground" : isAnswered ? "bg-success text-success-foreground" : "bg-muted text-muted-foreground"
+                          }`}>
                             {isAnswered ? <CheckCircle2 className="h-3.5 w-3.5" /> : i + 1}
                           </span>
-                          <span className={`line-clamp-2 leading-relaxed ${isCurrent ? "font-medium text-foreground" : "text-muted-foreground"}`}>{q.text}</span>
+                          <span className={`line-clamp-2 leading-relaxed text-right ${isCurrent ? "font-medium text-foreground" : "text-muted-foreground"}`}>
+                            {q.text}
+                          </span>
                         </button>
                       );
                     })}
@@ -371,9 +360,9 @@ export default function TakeQuiz() {
           )}
 
           {showNav && (
-            <div className="fixed inset-0 top-[8.5rem] z-30 bg-background/95 backdrop-blur-sm md:hidden overflow-auto pb-20">
+            <div className="fixed inset-0 top-[8.5rem] z-30 bg-background/95 backdrop-blur-sm md:hidden overflow-auto pb-20" dir="rtl">
               <div className="p-4 space-y-2">
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center justify-between mb-3 border-b pb-2">
                   <h3 className="text-sm font-bold">قائمة الأسئلة ({answeredCount}/{preparedQuestions.length} مُجاب)</h3>
                   <Button variant="ghost" size="sm" onClick={() => setShowNav(false)}>إغلاق</Button>
                 </div>
@@ -381,11 +370,21 @@ export default function TakeQuiz() {
                   const isAnswered = !!answers[q.id];
                   const isCurrent = i === currentIndex;
                   return (
-                    <button key={q.id} onClick={() => { goTo(i); setShowNav(false); }} className={`w-full text-start rounded-xl border-2 p-3 transition-all flex items-start gap-3 ${isCurrent ? "border-primary bg-primary/5" : isAnswered ? "border-success/30 bg-success/5" : "border-border"}`}>
-                      <span className={`h-7 w-7 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold ${isCurrent ? "bg-primary text-primary-foreground" : isAnswered ? "bg-success text-success-foreground" : "bg-muted text-muted-foreground"}`}>
+                    <button 
+                      key={q.id} 
+                      onClick={() => { goTo(i); setShowNav(false); }} 
+                      className={`w-full text-right rounded-xl border-2 p-3 transition-all flex items-start gap-3 ${
+                        isCurrent ? "border-primary bg-primary/5" : isAnswered ? "border-success/30 bg-success/5" : "border-border"
+                      }`}
+                    >
+                      <span className={`h-7 w-7 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold ${
+                        isCurrent ? "bg-primary text-primary-foreground" : isAnswered ? "bg-success text-success-foreground" : "bg-muted text-muted-foreground"
+                      }`}>
                         {isAnswered ? <CheckCircle2 className="h-4 w-4" /> : i + 1}
                       </span>
-                      <span className={`line-clamp-2 text-sm leading-relaxed ${isCurrent ? "font-medium" : "text-muted-foreground"}`}>{q.text}</span>
+                      <span className={`line-clamp-2 text-sm leading-relaxed text-right flex-1 ${isCurrent ? "font-bold text-foreground" : "text-muted-foreground"}`}>
+                        {q.text}
+                      </span>
                     </button>
                   );
                 })}
