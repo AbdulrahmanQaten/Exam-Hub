@@ -12,7 +12,7 @@ import {
 import { Clock, ArrowLeft, ArrowRight, Send, CheckCircle2, AlertTriangle, List, PanelRightClose, RefreshCw } from "lucide-react";
 import {
   getQuizById, getQuizByCode, submitResult, shuffleArray, addActiveStudent, removeActiveStudent,
-  type Quiz, type QuizQuestion,
+  getServerTime, type Quiz, type QuizQuestion,
 } from "@/lib/quizStore";
 import { toast } from "sonner";
 import { usePageTitle } from "@/hooks/usePageTitle";
@@ -31,6 +31,7 @@ export default function TakeQuiz() {
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [isSyncing, setIsSyncing] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
+  const [quizStartTime, setQuizStartTime] = useState<number | null>(null);
 
   useEffect(() => {
     const handleOnline = () => { setIsOffline(false); toast.success("تم استعادة الاتصال بالإنترنت"); };
@@ -44,9 +45,9 @@ export default function TakeQuiz() {
   useEffect(() => {
     if (quizId && studentName) {
       const storageKey = `quiz_progress_${quizId}_${studentName}`;
-      localStorage.setItem(storageKey, JSON.stringify({ answers, currentIndex, timeLeft }));
+      localStorage.setItem(storageKey, JSON.stringify({ answers, currentIndex, timeLeft, quizStartTime }));
     }
-  }, [answers, currentIndex, timeLeft, quizId, studentName]);
+  }, [answers, currentIndex, timeLeft, quizId, studentName, quizStartTime]);
 
   // Load from local storage
   useEffect(() => {
@@ -54,18 +55,18 @@ export default function TakeQuiz() {
       const storageKey = `quiz_progress_${quizId}_${studentName}`;
       const saved = localStorage.getItem(storageKey);
       if (saved) {
-        const { answers: sAnswers, currentIndex: sIndex, timeLeft: sTime } = JSON.parse(saved);
-        if (Object.keys(sAnswers).length > 0) {
-           setAnswers(sAnswers);
-           setCurrentIndex(sIndex);
+        const { answers: sAnswers, currentIndex: sIndex, timeLeft: sTime, quizStartTime: sStart } = JSON.parse(saved);
+        if (Object.keys(sAnswers).length > 0 || sStart) {
+           setAnswers(sAnswers || {});
+           setCurrentIndex(sIndex || 0);
            if (sTime) setTimeLeft(sTime);
+           if (sStart) setQuizStartTime(sStart);
            toast.info("تم استعادة تقدمك في الاختبار");
         }
       }
     }
   }, [quizId, studentName]);
 
-  const [startTime] = useState(Date.now());
   const timerRef = useRef<ReturnType<typeof setInterval>>();
   const [showNav, setShowNav] = useState(false);
   const [showSubmitWarning, setShowSubmitWarning] = useState(false);
@@ -87,7 +88,7 @@ export default function TakeQuiz() {
       return;
     }
     if (!code) return;
-    getQuizByCode(code).then((found) => {
+    getQuizByCode(code).then(async (found) => {
       if (!found) { navigate("/"); return; }
       setQuiz(found);
       
@@ -100,16 +101,60 @@ export default function TakeQuiz() {
         }));
       }
       setPreparedQuestions(questions);
-      if (found.settings.timerEnabled) setTimeLeft(found.settings.timerMinutes * 60);
+
+      // Initialize timer if enabled
+      if (found.settings.timerEnabled) {
+        const sTime = await getServerTime();
+        const now = sTime.getTime();
+        const durationSeconds = found.settings.timerMinutes * 60;
+        
+        // If we don't have a start time yet, set it now
+        if (!quizStartTime) {
+          setQuizStartTime(now);
+          setTimeLeft(durationSeconds);
+        } else {
+          // Calculate remaining time based on absolute start time
+          const elapsedSeconds = Math.floor((now - quizStartTime) / 1000);
+          const remaining = Math.max(0, durationSeconds - elapsedSeconds);
+          // Cap the display time to the duration to avoid "1:03 instead of 1:00"
+          setTimeLeft(Math.min(durationSeconds, remaining));
+          
+          if (remaining === 0 && !hasSubmittedRef.current) {
+            handleSubmit();
+          }
+        }
+      }
     });
   }, [quizId, studentName, studentId, code, navigate]);
 
-  const handleSubmit = useCallback(async (forceZero = false) => {
+  // Timer Ticker
+  useEffect(() => {
+    if (quiz?.settings.timerEnabled && timeLeft > 0 && !hasSubmittedRef.current) {
+      timerRef.current = setInterval(() => {
+        setTimeLeft((prev) => {
+          if (prev <= 1) {
+            if (timerRef.current) clearInterval(timerRef.current);
+            handleSubmit();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [quiz?.settings.timerEnabled, timeLeft === 0, !!quiz]);
+
+  const handleSubmit = useCallback(async (isExit = false) => {
     if (!quiz || !studentName || hasSubmittedRef.current) return;
     hasSubmittedRef.current = true;
     if (timerRef.current) clearInterval(timerRef.current);
-    const timeTaken = Math.round((Date.now() - startTime) / 1000);
-    const finalAnswers = forceZero ? { _violations: violationsRef.current.toString() } : { ...answersRef.current, _violations: violationsRef.current.toString() };
+
+    const effectiveStartTime = quizStartTime || Date.now();
+    const timeTaken = Math.round((Date.now() - effectiveStartTime) / 1000);
+    const finalAnswers = { ...answersRef.current, _violations: violationsRef.current.toString() };
     try {
       const result = await submitResult(quiz.id, studentName, finalAnswers, timeTaken, studentId);
       
@@ -118,14 +163,21 @@ export default function TakeQuiz() {
       const storageKey = `quiz_progress_${quiz.id}_${studentName}`;
       localStorage.removeItem(storageKey);
 
+      // Ensure we have correct values with multiple fallbacks
+      const finalScore = typeof result.score === 'number' ? result.score : 0;
+      const finalTotal = result.total_questions || result.totalQuestions || preparedQuestions.length;
+      const finalTime = result.time_taken || result.timeTaken || timeTaken;
+
       navigate(`/quiz/${code}/complete`, {
         state: { 
-          score: result.score, 
-          total: result.totalQuestions, 
+          score: finalScore, 
+          total: finalTotal, 
           studentName, 
-          timeTaken, 
-          wasForceSubmitted: forceZero,
+          timeTaken: finalTime, 
+          wasForceSubmitted: isExit,
           showFeedback: quiz.settings.showFeedback,
+          timerEnabled: quiz.settings.timerEnabled,
+          timerMinutes: quiz.settings.timerMinutes,
           questions: result.questions || preparedQuestions,
           userAnswers: finalAnswers
         },
@@ -134,7 +186,7 @@ export default function TakeQuiz() {
       console.error(err);
       hasSubmittedRef.current = false;
     }
-  }, [quiz, studentName, studentId, startTime, code, navigate, preparedQuestions]);
+  }, [quiz, studentName, studentId, quizStartTime, code, navigate, preparedQuestions]);
 
   useEffect(() => {
     return () => {
@@ -193,9 +245,7 @@ export default function TakeQuiz() {
   }, []);
 
   const trySubmit = () => {
-    const unansweredCount = preparedQuestions.length - Object.keys(answers).length;
-    if (unansweredCount > 0) setShowSubmitWarning(true);
-    else handleSubmit();
+    setShowSubmitWarning(true);
   };
 
   const goTo = (index: number) => {
@@ -244,14 +294,29 @@ export default function TakeQuiz() {
       <AlertDialog open={showSubmitWarning} onOpenChange={setShowSubmitWarning}>
         <AlertDialogContent className="text-right" dir="rtl">
           <AlertDialogHeader className="text-right sm:text-right">
-            <AlertDialogTitle className="flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-warning" /> أسئلة غير مجابة</AlertDialogTitle>
-            <AlertDialogDescription>
-              لديك {unansweredCount} {unansweredCount === 1 ? "سؤال غير مجاب" : unansweredCount === 2 ? "سؤالان غير مجابين" : "أسئلة غير مجابة"}. هل تريد إنهاء الاختبار على أي حال؟
+            <AlertDialogTitle className="flex items-center gap-2">
+              {unansweredCount > 0 ? (
+                <><AlertTriangle className="h-5 w-5 text-warning" /> أسئلة غير مجابة</>
+              ) : (
+                <><CheckCircle2 className="h-5 w-5 text-success" /> تأكيد تسليم الاختبار</>
+              )}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-base">
+              {unansweredCount > 0 ? (
+                <>لديك {unansweredCount} {unansweredCount === 1 ? "سؤال غير مجاب" : unansweredCount === 2 ? "سؤالان غير مجابين" : "أسئلة غير مجابة"}. هل تريد إنهاء الاختبار على أي حال؟</>
+              ) : (
+                <>لقد أجبت على جميع الأسئلة. هل أنت متأكد من رغبتك في تسليم الإجابات وإنهاء الاختبار؟</>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-row-reverse gap-2">
-            <AlertDialogCancel>العودة للأسئلة</AlertDialogCancel>
-            <AlertDialogAction onClick={() => handleSubmit()} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">إنهاء الاختبار</AlertDialogAction>
+            <AlertDialogCancel className="rounded-xl">العودة للأسئلة</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => handleSubmit()} 
+              className={`rounded-xl ${unansweredCount > 0 ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : "bg-primary text-primary-foreground hover:bg-primary/90"}`}
+            >
+              إنهاء وتسليم
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -259,12 +324,14 @@ export default function TakeQuiz() {
       <AlertDialog open={showExitWarning} onOpenChange={setShowExitWarning}>
         <AlertDialogContent className="text-right" dir="rtl">
           <AlertDialogHeader className="text-right sm:text-right">
-            <AlertDialogTitle className="flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-destructive" /> تحذير: لا تغادر الاختبار!</AlertDialogTitle>
-            <AlertDialogDescription>إذا غادرت هذه الصفحة سيتم إلغاء اختبارك وتسجيل النتيجة صفر. هل تريد المغادرة؟</AlertDialogDescription>
+            <AlertDialogTitle className="flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-destructive" /> هل أنت متأكد من المغادرة؟</AlertDialogTitle>
+            <AlertDialogDescription className="text-base">
+              إذا غادرت هذه الصفحة سيتم إنهاء اختبارك وتسجيل إجاباتك الحالية فقط. هل تريد الاستمرار والمغادرة؟
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-row-reverse gap-2">
-            <AlertDialogCancel>متابعة الاختبار</AlertDialogCancel>
-            <AlertDialogAction onClick={() => handleSubmit(true)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">مغادرة (صفر)</AlertDialogAction>
+            <AlertDialogCancel className="rounded-xl">متابعة الاختبار</AlertDialogCancel>
+            <AlertDialogAction onClick={() => handleSubmit(true)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl">إنهاء ومغادرة</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

@@ -15,7 +15,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { getQuizById, getResultsForQuiz, getActiveStudentsForQuiz, removeActiveStudent, type Quiz, type StudentResult, type ActiveStudent } from "@/lib/quizStore";
+import { getQuizById, getResultsForQuiz, getActiveStudentsForQuiz, removeActiveStudent, getServerTime, type Quiz, type StudentResult, type ActiveStudent } from "@/lib/quizStore";
 import * as XLSX from "xlsx";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell } from 'recharts';
 import { toast } from "sonner";
@@ -32,6 +32,8 @@ export default function QuizResults() {
   const [loading, setLoading] = useState(true);
   const [clearTarget, setClearTarget] = useState<string | null>(null);
   const [answerFilter, setAnswerFilter] = useState<'all' | 'correct' | 'wrong'>('all');
+  const [serverTimeOffset, setServerTimeOffset] = useState(0);
+  const [currentTime, setCurrentTime] = useState(Date.now());
 
   const loadData = async () => {
     if (!quizId) return;
@@ -39,9 +41,17 @@ export default function QuizResults() {
       const q = await getQuizById(quizId);
       if (q) {
         setQuiz(q);
-        const [r, a] = await Promise.all([getResultsForQuiz(quizId), getActiveStudentsForQuiz(quizId)]);
+        const [r, a, sTime] = await Promise.all([
+          getResultsForQuiz(quizId), 
+          getActiveStudentsForQuiz(quizId),
+          getServerTime()
+        ]);
         setResults(r);
         setActiveStudents(a);
+        
+        // Clock sync: Calculate offset (Server - Local)
+        const offset = sTime.getTime() - Date.now();
+        setServerTimeOffset(offset);
       }
     } catch (err) {
       console.error(err);
@@ -51,20 +61,39 @@ export default function QuizResults() {
   };
 
   useEffect(() => { loadData(); }, [quizId]);
-  useEffect(() => { const interval = setInterval(loadData, 5000); return () => clearInterval(interval); }, [quizId]);
+  
+  // Data polling every 5 seconds
+  useEffect(() => { 
+    const interval = setInterval(loadData, 5000); 
+    return () => clearInterval(interval); 
+  }, [quizId]);
+
+  // Real-time UI ticker (every 1 second)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Adjusted current time = Local Time + Server Offset
+      setCurrentTime(Date.now() + serverTimeOffset);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [serverTimeOffset]);
 
   const exportToExcel = () => {
     if (!quiz || results.length === 0) return;
-    const data = results.sort((a, b) => b.score - a.score).map((r, i) => ({
-      "الترتيب": i + 1, "اسم الطالب": r.studentName,
-      ...(r.studentId ? { "رقم الطالب": r.studentId } : {}),
-      "الدرجة": `${r.score}/${r.totalQuestions}`,
-      "النسبة المئوية": `${Math.round((r.score / r.totalQuestions) * 100)}%`,
-      "الوقت": formatTime(r.timeTaken),
-      "النزاهة (مخالفات)": parseInt(r.answers._violations || "0"),
-      "الحالة": Math.round((r.score / r.totalQuestions) * 100) >= 50 ? "ناجح" : "راسب",
-      "تاريخ الإكمال": new Date(r.completedAt).toLocaleString("ar-SA"),
-    }));
+    const data = results.sort((a, b) => b.score - a.score).map((r, i) => {
+      const maxSeconds = quiz.settings.timerEnabled ? (quiz.settings.timerMinutes || 0) * 60 : Infinity;
+      const effectiveTime = Math.min(r.timeTaken, maxSeconds);
+      
+      return {
+        "الترتيب": i + 1, "اسم الطالب": r.studentName,
+        ...(r.studentId ? { "رقم الطالب": r.studentId } : {}),
+        "الدرجة": `${r.score}/${r.totalQuestions}`,
+        "النسبة المئوية": `${Math.round((r.score / r.totalQuestions) * 100)}%`,
+        "الوقت": formatTime(effectiveTime),
+        "النزاهة (مخالفات)": parseInt(r.answers._violations || "0"),
+        "الحالة": Math.round((r.score / r.totalQuestions) * 100) >= 50 ? "ناجح" : "راسب",
+        "تاريخ الإكمال": new Date(r.completedAt).toLocaleString("ar-SA"),
+      };
+    });
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "النتائج");
@@ -198,7 +227,13 @@ export default function QuizResults() {
             </div>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {activeStudents.map((s, i) => {
-                const elapsed = Math.round((Date.now() - new Date(s.startedAt).getTime()) / 1000);
+                const elapsed = Math.round((currentTime - new Date(s.startedAt).getTime()) / 1000);
+                const isTimed = quiz.settings.timerEnabled;
+                const duration = (quiz.settings.timerMinutes || 0) * 60;
+                // Cap at 0 and duration to hide drift and negative values
+                const remaining = isTimed ? Math.min(duration, Math.max(0, duration - elapsed)) : 0;
+                const displayTime = isTimed ? remaining : Math.max(0, elapsed);
+
                 return (
                   <div key={i} className="flex items-center gap-3 rounded-xl border border-primary/20 bg-card p-3">
                     <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center"><Users className="h-5 w-5 text-primary" /></div>
@@ -206,7 +241,9 @@ export default function QuizResults() {
                       <p className="font-medium text-sm truncate">{s.studentName}</p>
                       {s.studentId && <p className="text-xs text-muted-foreground font-mono">{s.studentId}</p>}
                     </div>
-                    <Badge variant="outline" className="gap-1 font-mono text-xs"><Clock className="h-3 w-3" /> {formatTime(elapsed)}</Badge>
+                    <Badge variant={isTimed && remaining < 60 ? "destructive" : "outline"} className="gap-1 font-mono text-xs">
+                      <Clock className="h-3 w-3" /> {isTimed ? "متبقي:" : ""} {formatTime(displayTime)}
+                    </Badge>
                   </div>
                 );
               })}
@@ -349,6 +386,9 @@ export default function QuizResults() {
                 <TableBody>
                   {results.sort((a, b) => b.score - a.score).map((r, i) => {
                     const pct = Math.round((r.score / r.totalQuestions) * 100);
+                    const maxSeconds = quiz.settings.timerEnabled ? (quiz.settings.timerMinutes || 0) * 60 : Infinity;
+                    const effectiveTime = Math.min(r.timeTaken, maxSeconds);
+
                     return (
                       <TableRow key={r.id} className="animate-fade-in">
                         <TableCell className="font-medium">{i + 1}</TableCell>
@@ -360,7 +400,7 @@ export default function QuizResults() {
                         </TableCell>
                         <TableCell>{r.score}/{r.totalQuestions}</TableCell>
                         <TableCell className="font-bold">{pct}%</TableCell>
-                        <TableCell className="font-mono text-sm">{formatTime(r.timeTaken)}</TableCell>
+                        <TableCell className="font-mono text-sm">{formatTime(effectiveTime)}</TableCell>
                         <TableCell>
                           {parseInt(r.answers._violations || "0") > 0 ? (
                             <Badge variant="destructive" className="gap-1.5 bg-red-500 font-bold hover:bg-red-600" title="عدد مرات الخروج من الاختبار">

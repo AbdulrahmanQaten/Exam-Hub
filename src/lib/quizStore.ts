@@ -73,6 +73,12 @@ export async function lockQuizToCurrentIP(quizId: string): Promise<string> {
   return data;
 }
 
+export async function getServerTime(): Promise<Date> {
+  const { data, error } = await supabase.rpc("get_server_time");
+  if (error) return new Date();
+  return new Date(data);
+}
+
 export async function createQuiz(title: string, questions: QuizQuestion[], settings: QuizSettings, roster?: StudentRosterEntry[], allowed_ip?: string | null): Promise<Quiz> {
   const code = Math.random().toString(36).substring(2, 8).toUpperCase();
   const { data: { user } } = await supabase.auth.getUser();

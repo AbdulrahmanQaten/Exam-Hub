@@ -1,15 +1,91 @@
-import { useLocation, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, XCircle, Home, Clock, List } from "lucide-react";
+import { CheckCircle2, XCircle, Home, Clock, List, Loader2 } from "lucide-react";
+import { getResultsForQuiz, getQuizByCode, type QuizQuestion } from "@/lib/quizStore";
+
+interface ResultState {
+  score: number;
+  total: number;
+  studentName: string;
+  timeTaken: number;
+  showFeedback?: boolean;
+  timerEnabled?: boolean;
+  timerMinutes?: number;
+  questions?: QuizQuestion[];
+  userAnswers?: Record<string, string>;
+}
 
 export default function QuizComplete() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { score = 0, total = 0, studentName = "", timeTaken = 0, showFeedback = false, questions = [], userAnswers = {} } = (location.state || {}) as {
-    score: number; total: number; studentName: string; timeTaken: number; showFeedback?: boolean; questions?: any[]; userAnswers?: Record<string, string>;
-  };
+  const { code } = useParams();
+  const [result, setResult] = useState<ResultState | null>(location.state as ResultState);
+  const [loading, setLoading] = useState(!location.state);
+
+  useEffect(() => {
+    // If we have state, we're good
+    if (location.state) {
+      setResult(location.state as ResultState);
+      setLoading(false);
+      return;
+    }
+
+    // If no state (e.g. refresh), try to fetch the latest result for this student from DB
+    // This requires the studentName to be stored somewhere, but for now we'll just try to fetch
+    // the very latest result if possible, or redirect.
+    const tryRecoverResult = async () => {
+      if (!code) { navigate("/"); return; }
+      try {
+        const quiz = await getQuizByCode(code);
+        if (!quiz) { navigate("/"); return; }
+        
+        const results = await getResultsForQuiz(quiz.id);
+        if (results && results.length > 0) {
+          // Find the latest result for this student if possible, or just the most recent
+          const latest = results[0]; 
+          setResult({
+            score: latest.score,
+            total: latest.totalQuestions || quiz.questions.length,
+            studentName: latest.studentName,
+            timeTaken: latest.timeTaken,
+            showFeedback: quiz.settings.showFeedback,
+            timerEnabled: quiz.settings.timerEnabled,
+            timerMinutes: quiz.settings.timerMinutes,
+            questions: quiz.questions,
+            userAnswers: latest.answers
+          });
+        } else {
+          navigate("/");
+        }
+      } catch (err) {
+        console.error(err);
+        navigate("/");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    tryRecoverResult();
+  }, [code, location.state, navigate]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!result) return null;
+
+  const { score, total, studentName, timeTaken, showFeedback, questions = [], userAnswers = {}, timerEnabled, timerMinutes } = result;
+  
+  // Cap the timeTaken if timer is enabled
+  const maxSeconds = timerEnabled ? (timerMinutes || 0) * 60 : Infinity;
+  const effectiveTimeTaken = Math.min(timeTaken, maxSeconds);
 
   const percentage = total > 0 ? Math.round((score / total) * 100) : 0;
   const passed = percentage >= 50;
@@ -49,7 +125,7 @@ export default function QuizComplete() {
 
         <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-8">
           <Clock className="h-4 w-4" />
-          {formatTime(timeTaken)}
+          {formatTime(effectiveTimeTaken)}
         </div>
 
         <Button onClick={() => navigate("/")} className="rounded-xl gap-2 w-full max-w-xs mx-auto">
