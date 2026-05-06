@@ -60,5 +60,18 @@ Fast refresh only works when a file only exports components.
 
 **Proposed Fix:** Implement Vitest for unit tests (stores, utilities) and Playwright for end-to-end testing, covering critical user paths.
 
+## 4. Security Vulnerabilities
+
+### Table Publicly Accessible (RLS Disabled) - FIXED
+- Supabase reported that `active_students` was publicly accessible (RLS disabled).
+- Investigated and found that `active_students` had RLS disabled on the remote database.
+- Found that `student_results` had a permissive public INSERT policy.
+
+**Fix Applied:**
+- Enabled RLS on `active_students`.
+- Restricted `SELECT` and `DELETE` on `active_students` to quiz owners/admins.
+- Removed public `INSERT` policy on `student_results` (secured via `submit_quiz_result` RPC).
+- Applied fix via migration `20260506051954_secure_active_students.sql`.
+
 ## 3. TypeScript Compiler
 - `tsc --noEmit` runs successfully with 0 errors, meaning type definitions are structurally sound aside from the explicit `any` usage.
