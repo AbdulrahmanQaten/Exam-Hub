@@ -1,0 +1,21 @@
+# ExamHub - robots.txt
+# https://examshubs.netlify.app/
+
+User-agent: *
+Allow: /
+
+# Allow important public pages
+Allow: /how-it-works
+Allow: /auth
+Allow: /quiz/
+
+# Disallow private/dynamic pages that shouldn't be indexed
+Disallow: /teacher/results/
+Disallow: /teacher/edit/
+Disallow: /banks/
+Disallow: /classes/
+Disallow: /quiz/*/start
+Disallow: /quiz/*/complete
+
+# Sitemap location
+Sitemap: https://examshubs.netlify.app/sitemap.xml

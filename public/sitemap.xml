@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+
+  <!-- Homepage - Highest priority -->
+  <url>
+    <loc>https://examshubs.netlify.app/</loc>
+    <lastmod>2026-06-01</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://examshubs.netlify.app/"/>
+  </url>
+
+  <!-- How It Works page -->
+  <url>
+    <loc>https://examshubs.netlify.app/how-it-works</loc>
+    <lastmod>2026-06-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://examshubs.netlify.app/how-it-works"/>
+  </url>
+
+  <!-- Auth page -->
+  <url>
+    <loc>https://examshubs.netlify.app/auth</loc>
+    <lastmod>2026-06-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://examshubs.netlify.app/auth"/>
+  </url>
+
+  <!-- Teacher Dashboard -->
+  <url>
+    <loc>https://examshubs.netlify.app/teacher</loc>
+    <lastmod>2026-06-01</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://examshubs.netlify.app/teacher"/>
+  </url>
+
+  <!-- Create Quiz -->
+  <url>
+    <loc>https://examshubs.netlify.app/teacher/create</loc>
+    <lastmod>2026-06-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://examshubs.netlify.app/teacher/create"/>
+  </url>
+
+</urlset>
