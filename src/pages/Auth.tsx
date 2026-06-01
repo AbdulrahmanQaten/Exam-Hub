@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -95,6 +96,10 @@ export default function Auth() {
 
   return (
     <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-muted/30 p-4">
+      <Helmet>
+        <title>تسجيل الدخول | اختبارات</title>
+        <meta name="robots" content="noindex, nofollow" />
+      </Helmet>
       <Card className="w-full max-w-md p-6">
         <div className="mb-6 text-center">
           <h1 className="text-2xl font-bold">{isLogin ? "تسجيل الدخول" : "إنشاء حساب جديد"}</h1>

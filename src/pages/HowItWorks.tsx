@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,6 +14,15 @@ export default function HowItWorks() {
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-muted/20 py-12">
+      <Helmet>
+        <title>دليل الاستخدام الشامل | كيف تستخدم منصة اختبارات</title>
+        <meta name="description" content="تعرف على كيفية إنشاء الاختبارات الإلكترونية، إدارة بنوك الأسئلة، وتتبع نتائج الطلاب في منصة اختبارات. دليل مفصل للمعلمين والطلاب." />
+        <link rel="canonical" href="https://examshubs.netlify.app/how-it-works" />
+        <meta property="og:url" content="https://examshubs.netlify.app/how-it-works" />
+        <meta property="og:title" content="دليل الاستخدام الشامل | منصة اختبارات" />
+        <meta property="og:description" content="تعرف على كيفية إنشاء الاختبارات الإلكترونية، إدارة بنوك الأسئلة، وتتبع نتائج الطلاب." />
+      </Helmet>
+
       <div className="container max-w-5xl">
         
         <Button variant="ghost" className="mb-6 gap-2" onClick={() => navigate("/")}>

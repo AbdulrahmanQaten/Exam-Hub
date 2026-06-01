@@ -55,4 +55,32 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // React core — cached separately, rarely changes
+          "vendor-react": ["react", "react-dom", "react-router-dom"],
+          // UI primitives — large but stable
+          "vendor-radix": [
+            "@radix-ui/react-dialog",
+            "@radix-ui/react-dropdown-menu",
+            "@radix-ui/react-tabs",
+            "@radix-ui/react-select",
+            "@radix-ui/react-tooltip",
+            "@radix-ui/react-popover",
+            "@radix-ui/react-accordion",
+          ],
+          // Supabase — only needed after auth
+          "vendor-supabase": ["@supabase/supabase-js"],
+          // Charts — heavy, only on results pages
+          "vendor-charts": ["recharts"],
+          // Form & validation utilities
+          "vendor-forms": ["react-hook-form", "@hookform/resolvers", "zod"],
+          // Excel import — heavy, rarely used
+          "vendor-xlsx": ["xlsx"],
+        },
+      },
+    },
+  },
 }));

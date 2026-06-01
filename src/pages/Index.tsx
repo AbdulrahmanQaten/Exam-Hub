@@ -1,15 +1,14 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { GraduationCap, Users, ClipboardList, ArrowLeft, Library, UserPlus, Image as ImageIcon, Target, BarChart3, HelpCircle, CheckCircle2, FileSpreadsheet } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { usePageTitle } from "@/hooks/usePageTitle";
 
 export default function Index() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  usePageTitle("الرئيسية - منصة الاختبارات الذكية");
   const [quizCode, setQuizCode] = useState("");
 
   const handleJoinQuiz = () => {
@@ -20,6 +19,15 @@ export default function Index() {
 
   return (
     <div className="min-h-[calc(100vh-4rem)]">
+      <Helmet>
+        <title>اختبارات | المنصة الأسهل لإنشاء وإدارة الاختبارات الإلكترونية</title>
+        <meta name="description" content="أنشئ اختبارات تفاعلية ذكية، بنوك أسئلة منظمة، وإدارة متكاملة للفصول. تتبع نتائج طلابك لحظياً مع تحليلات بيانية دقيقة في بيئة تعليمية آمنة ومتطورة." />
+        <link rel="canonical" href="https://examshubs.netlify.app/" />
+        <meta property="og:url" content="https://examshubs.netlify.app/" />
+        <meta property="og:title" content="اختبارات | المنصة الأسهل لإنشاء الاختبارات الإلكترونية" />
+        <meta property="og:description" content="أنشئ اختبارات تفاعلية ذكية، بنوك أسئلة منظمة، وإدارة متكاملة للفصول." />
+      </Helmet>
+
       {/* Hero */}
       <section className="relative overflow-hidden gradient-hero py-20 lg:py-32">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMSIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjEpIi8+PC9zdmc+')] opacity-30" />
