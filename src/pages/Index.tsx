@@ -152,7 +152,7 @@ export default function Index() {
             <div className="mt-10">
               <Button size="lg" onClick={() => navigate("/auth")} className="gap-2 rounded-xl h-14 px-8 text-lg font-bold shadow-lg mx-auto">
                 <UserPlus className="h-6 w-6" />
-                إنشاء حساب مجاني أو تسجيل الدخول
+                التسجيل
               </Button>
             </div>
           )}
